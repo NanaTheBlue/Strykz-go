@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strykz/auth"
+	"strykz/social"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -23,6 +24,7 @@ func main() {
 	http.HandleFunc("/register", auth.Register(conn))
 	http.HandleFunc("/login", auth.Login(conn))
 	http.HandleFunc("/logout", auth.Logout(conn))
+	http.HandleFunc("/invite", social.PartyInvite(conn))
 	//http.HandleFunc("/protected", protected)
 	fmt.Println("Server started on http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
