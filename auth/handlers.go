@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strykz/db"
 	"time"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func Register(conn *pgxpool.Pool) http.HandlerFunc {
+func Register() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -29,7 +28,7 @@ func Register(conn *pgxpool.Pool) http.HandlerFunc {
 		}
 
 		hashedPassword, _ := hashPassword(password)
-		_, err := conn.Exec(context.Background(), "INSERT INTO users (username, hashed_password, email ) VALUES ($1, $2, $3);", username, hashedPassword, email)
+		_, err := db.Pool.Exec(context.Background(), "INSERT INTO users (username, hashed_password, email ) VALUES ($1, $2, $3);", username, hashedPassword, email)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Insert failed: %v\n", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -40,7 +39,7 @@ func Register(conn *pgxpool.Pool) http.HandlerFunc {
 
 }
 
-func Login(conn *pgxpool.Pool) http.HandlerFunc {
+func Login() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -53,7 +52,7 @@ func Login(conn *pgxpool.Pool) http.HandlerFunc {
 		password := r.FormValue("password")
 		var hashed_password string
 
-		err := conn.QueryRow(context.Background(), "SELECT hashed_password FROM users WHERE username = $1;", username).Scan(&hashed_password)
+		err := db.Pool.QueryRow(context.Background(), "SELECT hashed_password FROM users WHERE username = $1;", username).Scan(&hashed_password)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Select Failed: %v\n", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -73,7 +72,7 @@ func Login(conn *pgxpool.Pool) http.HandlerFunc {
 		http.SetCookie(w, &http.Cookie{
 			Name:     "session_token",
 			Value:    sessionToken,
-			Expires:  time.Now().Add(24 * time.Hour),
+			Expires:  time.Now().Add(time.Hour * 24 * 14),
 			HttpOnly: true,
 		})
 
@@ -81,11 +80,11 @@ func Login(conn *pgxpool.Pool) http.HandlerFunc {
 		http.SetCookie(w, &http.Cookie{
 			Name:     "csrf_token",
 			Value:    csrfToken,
-			Expires:  time.Now().Add(24 * time.Hour),
+			Expires:  time.Now().Add(time.Hour * 24 * 14),
 			HttpOnly: false,
 		})
 
-		_, insertError := conn.Exec(context.Background(), "UPDATE users SET session_token = $1, csrf_token = $2 WHERE username = $3;", sessionToken, csrfToken, username)
+		_, insertError := db.Pool.Exec(context.Background(), "UPDATE users SET session_token = $1, csrf_token = $2 WHERE username = $3;", sessionToken, csrfToken, username)
 		if insertError != nil {
 			fmt.Fprintf(os.Stderr, "Token Update failed: %v\n", insertError)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -96,15 +95,26 @@ func Login(conn *pgxpool.Pool) http.HandlerFunc {
 
 }
 
-func Logout(conn *pgxpool.Pool) http.HandlerFunc {
+func Logout() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := Authorize(conn, r); err != nil {
+		if err := Authorize(r); err != nil {
 			er := http.StatusUnauthorized
 			http.Error(w, "Unauthorized", er)
 			return
 		}
 
 		// Clear cookie
+		sessionToken, err := r.Cookie("session_token")
+		if err != nil || sessionToken.Value == "" {
+			return
+		}
+
+		_, updateError := db.Pool.Exec(context.Background(), "UPDATE users SET session_token = null, expires_at = null, WHERE session_token = $1;", sessionToken)
+		if updateError != nil {
+			fmt.Fprintf(os.Stderr, "Token Update failed: %v\n", updateError)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
 
 		http.SetCookie(w, &http.Cookie{
 			Name:     "session_token",
@@ -121,14 +131,7 @@ func Logout(conn *pgxpool.Pool) http.HandlerFunc {
 
 		// clear token from database
 
-		username := r.FormValue("username")
-
-		_, updateError := conn.Exec(context.Background(), "UPDATE users SET session_token = null, csrf_token = null WHERE username = $1;", username)
-		if updateError != nil {
-			fmt.Fprintf(os.Stderr, "Token Update failed: %v\n", updateError)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+		// should also set refresh token to "" and clear it from database
 
 		fmt.Fprintln(w, "Logged out Success")
 	}

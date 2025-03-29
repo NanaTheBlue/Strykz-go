@@ -4,19 +4,19 @@ import (
 	"context"
 	"errors"
 	"net/http"
-
-	"github.com/jackc/pgx/v5/pgxpool"
+	"strykz/db"
 )
 
 var AuthError = errors.New("Unauthorized")
 
-func Authorize(conn *pgxpool.Pool, r *http.Request) error {
+func Authorize(r *http.Request) error {
 	//username := r.FormValue("username")
 	var session_token string
 	var csrf_token string
 	st, err := r.Cookie("session_token")
+	// check refresh token aswell should also make sure they arent expired
 
-	user := conn.QueryRow(context.Background(), "SELECT session_token, csrf_token FROM users WHERE session_token = $1;", st.Value).Scan(&session_token, &csrf_token)
+	user := db.Pool.QueryRow(context.Background(), "SELECT session_token FROM users WHERE session_token = $1;", st.Value).Scan(&session_token)
 	if user != nil {
 		return AuthError
 	}

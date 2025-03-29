@@ -6,8 +6,7 @@ import (
 	"os"
 
 	"net/http"
-
-	"github.com/jackc/pgx/v5/pgxpool"
+	"strykz/db"
 )
 
 /*
@@ -17,7 +16,7 @@ type party struct {
 }
 */
 
-func PartyInvite(conn *pgxpool.Pool) http.HandlerFunc {
+func PartyInvite() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -34,7 +33,7 @@ func PartyInvite(conn *pgxpool.Pool) http.HandlerFunc {
 
 		var recipientID string
 
-		err := conn.QueryRow(context.Background(),
+		err := db.Pool.QueryRow(context.Background(),
 			"SELECT id FROM users WHERE username = $1", username).Scan(&recipientID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "User lookup failed: %v\n", err)
@@ -46,7 +45,7 @@ func PartyInvite(conn *pgxpool.Pool) http.HandlerFunc {
 
 		var senderId = "c1f4232b-a3df-4a1a-a3c5-0515ff90aaf5"
 
-		_, error := conn.Exec(context.Background(), "INSERT INTO notifications (recipient_id, sender_id, type ) VALUES ($1, $2, $3);", recipientID, senderId, party)
+		_, error := db.Pool.Exec(context.Background(), "INSERT INTO notifications (recipient_id, sender_id, type ) VALUES ($1, $2, $3);", recipientID, senderId, party)
 		if error != nil {
 			fmt.Fprintf(os.Stderr, "Insert failed: %v\n", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
