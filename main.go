@@ -3,30 +3,28 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"strykz/auth"
 	"strykz/db"
+	"strykz/que"
 	"strykz/social"
 )
 
 func main() {
-	var err error
+	//todo setup cors
+
 	// just the testing db username and password will change it in prod and make it a env
 	db.InitDB()
 
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
-	}
 	defer db.CloseDB()
 
 	http.HandleFunc("/register", auth.Register())
-	http.HandleFunc("/login", auth.Login())
+	http.HandleFunc("/login", auth.Rate(auth.Login(), 5, 10))
 	http.HandleFunc("/logout", auth.Logout())
-	http.HandleFunc("/invite", social.PartyInvite())
-	//http.HandleFunc("/protected", protected)
-	fmt.Println("Server started on http://localhost:8080")
+	http.HandleFunc("/invite", auth.Rate(auth.AuthMiddleware(social.PartyInvite()), 5, 10))
+	http.HandleFunc("/que", auth.Rate(auth.AuthMiddleware(que.QuePlayer()), 5, 10))
 
-	http.ListenAndServe(":8080", nil)
+	fmt.Println("Server started on http://localhost:8081")
+
+	http.ListenAndServe(":8081", nil)
 
 }

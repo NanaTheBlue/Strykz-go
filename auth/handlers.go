@@ -64,9 +64,16 @@ func Login() http.HandlerFunc {
 			http.Error(w, "invalid username or password", er)
 			return
 		}
-
 		sessionToken := generateToken(32)
 		csrfToken := generateToken(32)
+
+		_, insertError := db.Pool.Exec(context.Background(), "UPDATE users SET session_token = $1 WHERE username = $2;", sessionToken, username)
+		if insertError != nil {
+			fmt.Fprintf(os.Stderr, "Token Update failed: %v\n", insertError)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		fmt.Fprintln(w, "Login Success")
 
 		// set session cookie
 		http.SetCookie(w, &http.Cookie{
@@ -84,13 +91,6 @@ func Login() http.HandlerFunc {
 			HttpOnly: false,
 		})
 
-		_, insertError := db.Pool.Exec(context.Background(), "UPDATE users SET session_token = $1, csrf_token = $2 WHERE username = $3;", sessionToken, csrfToken, username)
-		if insertError != nil {
-			fmt.Fprintf(os.Stderr, "Token Update failed: %v\n", insertError)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-		fmt.Fprintln(w, "Login Success")
 	}
 
 }

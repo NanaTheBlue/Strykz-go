@@ -24,6 +24,12 @@ func PartyInvite() http.HandlerFunc {
 			http.Error(w, "Invalid method", er)
 			return
 		}
+		senderId, ok := r.Context().Value("userID").(string)
+		if !ok {
+			http.Error(w, "Username not found", http.StatusInternalServerError)
+			return
+		}
+
 		username := r.FormValue("username")
 
 		if username == "" {
@@ -42,8 +48,6 @@ func PartyInvite() http.HandlerFunc {
 		}
 
 		party := "PartyInvite"
-
-		var senderId = "c1f4232b-a3df-4a1a-a3c5-0515ff90aaf5"
 
 		_, error := db.Pool.Exec(context.Background(), "INSERT INTO notifications (recipient_id, sender_id, type ) VALUES ($1, $2, $3);", recipientID, senderId, party)
 		if error != nil {
