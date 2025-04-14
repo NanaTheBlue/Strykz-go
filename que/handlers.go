@@ -3,6 +3,7 @@ package que
 import (
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/websocket"
 )
@@ -27,6 +28,8 @@ func reader(conn *websocket.Conn) {
 		}
 	}
 }
+
+var quemap sync.Map
 
 func QuePlayer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

@@ -2,17 +2,12 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"log"
-	"net"
 	"net/http"
 	"os"
 	"strykz/db"
 	"sync"
 	"time"
-
-	"golang.org/x/time/rate"
 )
 
 /*
@@ -20,33 +15,15 @@ import (
 		//authMiddleware,
 	}
 */
-func getIP(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		log.Printf("Error parsing IP: %v", err)
-		return ""
-	}
-	return host
+
+type user struct {
+	userID         string
+	userName       string
+	profilePicture string
+	expires        time.Time
 }
 
 var ipLimiterMap sync.Map
-
-func Rate(next http.HandlerFunc, limit rate.Limit, burst int) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ip := getIP(r)
-
-		limiterAny, _ := ipLimiterMap.LoadOrStore(ip, rate.NewLimiter(limit, burst))
-		limiter := limiterAny.(*rate.Limiter)
-
-		if !limiter.Allow() {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusTooManyRequests)
-			json.NewEncoder(w).Encode(map[string]string{"error": "To many requests"})
-			return
-		}
-		next(w, r)
-	}
-}
 
 /*
 func recoveryMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -68,7 +45,7 @@ func recoveryMiddleware(next http.HandlerFunc) http.HandlerFunc {
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		type contextKey string
-		const useridKey = contextKey("userID")
+		const userKey = contextKey("user")
 
 		sessionToken, errr := r.Cookie("session_token")
 		csrf_token, err := r.Cookie("CSRF_Token")
@@ -83,22 +60,21 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		var userID string
-		var expires time.Time
+		var u user
 
 		// i should prob increase the tokens expiration date if its within a 24 hours of expiration date.
-		er := db.Pool.QueryRow(context.Background(), "SELECT id,expires_at FROM users WHERE session_token = $1;", sessionToken).Scan(&userID, &expires)
+		er := db.Pool.QueryRow(context.Background(), "SELECT id,expires_at,username FROM users WHERE session_token = $1;", sessionToken).Scan(&u.userID, &u.expires, &u.userName)
 		if er != nil {
 			fmt.Fprintf(os.Stderr, "Select Failed: %v\n", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		if time.Now().After(expires) {
+		if time.Now().After(u.expires) {
 			// wanna return something to the front end here so it can redirect the user to the login page
 			return
 		}
-		// putting the username in context so that we we can use it with the next request avoiding another database query
-		ctx := context.WithValue(r.Context(), "userID", userID)
+		// putting the user struct  in context so that we we can use it with the next request avoiding another database query
+		ctx := context.WithValue(r.Context(), userKey, u)
 
 		next(w, r.WithContext(ctx))
 	}

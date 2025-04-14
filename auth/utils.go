@@ -3,9 +3,13 @@ package auth
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"log"
+	"net"
+	"net/http"
 
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/time/rate"
 )
 
 func hashPassword(password string) (string, error) {
@@ -25,4 +29,30 @@ func generateToken(length int) string {
 		log.Fatalf("Failed to generate token: %v", err)
 	}
 	return base64.URLEncoding.EncodeToString(bytes)
+}
+
+func Rate(next http.HandlerFunc, limit rate.Limit, burst int) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ip := getIP(r)
+
+		limiterAny, _ := ipLimiterMap.LoadOrStore(ip, rate.NewLimiter(limit, burst))
+		limiter := limiterAny.(*rate.Limiter)
+
+		if !limiter.Allow() {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusTooManyRequests)
+			json.NewEncoder(w).Encode(map[string]string{"error": "To many requests"})
+			return
+		}
+		next(w, r)
+	}
+}
+
+func getIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		log.Printf("Error parsing IP: %v", err)
+		return ""
+	}
+	return host
 }
