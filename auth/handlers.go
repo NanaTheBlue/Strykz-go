@@ -67,29 +67,38 @@ func Login() http.HandlerFunc {
 		sessionToken := generateToken(32)
 		csrfToken := generateToken(32)
 
-		_, insertError := db.Pool.Exec(context.Background(), "UPDATE users SET session_token = $1 WHERE username = $2;", sessionToken, username)
+		expireTime := time.Now().Add(time.Hour * 24 * 14)
+		currentTime := time.Now()
+
+		_, insertError := db.Pool.Exec(context.Background(), "UPDATE users SET session_token = $1, expires_at = $2, last_login = $3  WHERE username = $4;", sessionToken, expireTime, currentTime, username)
 		if insertError != nil {
 			fmt.Fprintf(os.Stderr, "Token Update failed: %v\n", insertError)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-		fmt.Fprintln(w, "Login Success")
 
 		// set session cookie
 		http.SetCookie(w, &http.Cookie{
 			Name:     "session_token",
 			Value:    sessionToken,
-			Expires:  time.Now().Add(time.Hour * 24 * 14),
+			Expires:  expireTime,
+			SameSite: http.SameSiteNoneMode,
 			HttpOnly: true,
+			Path:     "/",
+			Secure:   true,
 		})
 
 		// set CSRF token in a cookie
 		http.SetCookie(w, &http.Cookie{
 			Name:     "csrf_token",
 			Value:    csrfToken,
-			Expires:  time.Now().Add(time.Hour * 24 * 14),
+			Expires:  expireTime,
+			SameSite: http.SameSiteNoneMode,
 			HttpOnly: false,
+			Path:     "/",
+			Secure:   true,
 		})
+		fmt.Fprintln(w, "Login Success")
 
 	}
 
@@ -121,12 +130,14 @@ func Logout() http.HandlerFunc {
 			Value:    "",
 			Expires:  time.Now().Add(-time.Hour),
 			HttpOnly: true,
+			SameSite: http.SameSiteNoneMode,
 		})
 		http.SetCookie(w, &http.Cookie{
 			Name:     "csrf_token",
 			Value:    "",
 			Expires:  time.Now().Add(-time.Hour),
 			HttpOnly: false,
+			SameSite: http.SameSiteNoneMode,
 		})
 
 		// clear token from database
