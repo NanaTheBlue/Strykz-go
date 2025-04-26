@@ -80,8 +80,8 @@ func CheckNotifications(ctx context.Context) error {
 		return nil
 	}
 	//fmt.Printf("%+v\n", notifications)
-	message := "A"
-	if sendToClient(u.UserID, message) != nil {
+
+	if sendToClient(u.UserID, notifications) != nil {
 		failed := errors.New("WRONG MESSAGE")
 		return failed
 	}
@@ -90,14 +90,23 @@ func CheckNotifications(ctx context.Context) error {
 
 }
 
-func sendToClient(userID string, message string) error {
+// Maybe should make a function that marshalls json since im using it twice so far
+
+func sendToClient(userID string, message []Notification) error {
 
 	value, ok := onlineUsers.Load(userID)
 	if !ok {
 		fmt.Println("inside sendToClient")
 	}
+
+	msgJSON, errr := json.Marshal(message)
+	if errr != nil {
+		log.Printf("Error marshalling message to JSON: %v", errr)
+		return errr
+	}
+
 	client := value.(*Client)
-	err := client.Conn.WriteMessage(websocket.TextMessage, []byte(message))
+	err := client.Conn.WriteMessage(websocket.TextMessage, msgJSON)
 	if err != nil {
 		log.Println("Failed to send message:", err)
 		return err
