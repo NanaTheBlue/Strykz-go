@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	_ "image/jpeg"
@@ -75,17 +76,34 @@ func CheckNotifications(ctx context.Context) error {
 		return err
 	}
 
-	//return the data
 	if len(notifications) == 0 {
 		return nil
 	}
-	fmt.Printf("%+v\n", notifications)
+	//fmt.Printf("%+v\n", notifications)
+	message := "A"
+	if sendToClient(u.UserID, message) != nil {
+		failed := errors.New("WRONG MESSAGE")
+		return failed
+	}
 
 	return nil
 
 }
 
-func sendToClient() {
+func sendToClient(userID string, message string) error {
+
+	value, ok := onlineUsers.Load(userID)
+	if !ok {
+		fmt.Println("inside sendToClient")
+	}
+	client := value.(*Client)
+	err := client.Conn.WriteMessage(websocket.TextMessage, []byte(message))
+	if err != nil {
+		log.Println("Failed to send message:", err)
+		return err
+	}
+
+	return nil
 
 }
 

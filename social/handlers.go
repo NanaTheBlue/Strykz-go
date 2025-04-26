@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strykz/auth"
 	"strykz/db"
 	"sync"
 
@@ -59,17 +60,13 @@ func SetOnlineStatus(s db.Store) http.HandlerFunc {
 
 		// very important that i change this line later
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-		/*
-			userID, ok := r.Context().Value("userID").(string)
 
+		user, ok := r.Context().Value(auth.UserKey).(auth.User)
 
-			if !ok {
-				http.Error(w, "Username not found", http.StatusInternalServerError)
-				return
-			}
-		*/
-		userID := "Bingus"
-		userName := "Bongus"
+		if !ok {
+			http.Error(w, "User not found", http.StatusInternalServerError)
+			return
+		}
 
 		ws, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -77,15 +74,15 @@ func SetOnlineStatus(s db.Store) http.HandlerFunc {
 			return
 		}
 		log.Println("Client Connected to Websocket")
-		s.Add(context.Background(), userID, userName, 60)
+		s.Add(context.Background(), user.UserID, user.UserName, 60)
 
-		onlineUsers.Store(userID, &Client{
-			UserID: userID,
+		onlineUsers.Store(user.UserID, &Client{
+			UserID: user.UserID,
 			Conn:   ws,
 		})
 		CheckNotifications(r.Context())
 
-		reader(s, userID, ws)
+		go reader(s, user.UserID, ws)
 
 	}
 
