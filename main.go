@@ -7,6 +7,7 @@ import (
 	"strykz/db"
 	"strykz/que"
 	"strykz/social"
+	"strykz/strykzaws"
 )
 
 func main() {
@@ -29,7 +30,7 @@ func main() {
 	http.HandleFunc("/logout", auth.Logout())
 	http.HandleFunc("/invite", auth.Rate(auth.AuthMiddleware(social.PartyInvite()), 5, 10))
 	http.HandleFunc("/online", auth.Cors(auth.WSAuth(social.SetOnlineStatus(store))))
-	http.HandleFunc("/updatepfp", social.ChangeProfilePicture())
+	http.HandleFunc("/updatepfp", strykzaws.ChangeProfilePicture())
 
 	// uncomment later testing stuff http.HandleFunc("/online", auth.Rate(auth.AuthMiddleware(social.SetOnlineStatus()), 5, 10))
 	http.HandleFunc("/que", auth.Rate(auth.WSAuth(que.QuePlayer()), 5, 10))
