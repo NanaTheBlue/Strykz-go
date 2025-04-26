@@ -28,6 +28,11 @@ const (
 	MB = 1 << 20
 )
 
+type Notification struct {
+	Sender_id         string `json:"sender"`
+	Notification_type string `json:"notification_type"`
+}
+
 func heartBeat(p []byte) bool {
 	if string(p) == "Pong" {
 		return true
@@ -35,18 +40,52 @@ func heartBeat(p []byte) bool {
 	return false
 }
 
-func CheckNotifications(ctx context.Context) {
+func CheckNotifications(ctx context.Context) error {
 	u, ok := ctx.Value(auth.UserKey).(auth.User)
 	if !ok {
 		fmt.Println("user not found in context")
-		return
+		return nil
 	}
 
+	var notifications []Notification
+
 	fmt.Println(u.UserID)
-	notifications := db.Pool.QueryRow(context.Background(), "SELECT sender_id, type FROM notifications WHERE recipient_id = $1", u.UserID)
-	if notifications != nil {
-		return
+	rows, err := db.Pool.Query(context.Background(), "SELECT sender_id, type FROM notifications WHERE recipient_id = $1", u.UserID)
+	if err != nil {
+		return err
 	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var sender_id string
+		var notification_type string
+		err = rows.Scan(&sender_id, &notification_type)
+		if err != nil {
+			return err
+		}
+		notifications = append(notifications, Notification{
+			Sender_id:         sender_id,
+			Notification_type: notification_type,
+		})
+
+	}
+
+	if rows.Err() != nil {
+		return err
+	}
+
+	//return the data
+	if len(notifications) == 0 {
+		return nil
+	}
+	fmt.Printf("%+v\n", notifications)
+
+	return nil
+
+}
+
+func sendToClient() {
 
 }
 
