@@ -2,6 +2,7 @@ package social
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -68,15 +69,18 @@ func SetOnlineStatus(s db.Store) http.HandlerFunc {
 			UserID: user.UserID,
 			Conn:   ws,
 		})
-		CheckNotifications(r.Context())
+		//"notifications"
+		go SubscribeToChannel(r.Context(), s)
 
-		go reader(s, user.UserID, ws)
+		checkNotifications(r.Context())
+
+		reader(s, user.UserID, ws)
 
 	}
 
 }
 
-func PartyInvite() http.HandlerFunc {
+func PartyInvite(s db.Store) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -85,7 +89,9 @@ func PartyInvite() http.HandlerFunc {
 			return
 		}
 		//reFactor this dont work since i migrated to using a struct
-		senderId, ok := r.Context().Value("user").(string)
+
+		//
+		u, ok := r.Context().Value(auth.UserKey).(auth.User)
 		if !ok {
 			http.Error(w, "Username not found", http.StatusInternalServerError)
 			return
@@ -110,12 +116,29 @@ func PartyInvite() http.HandlerFunc {
 
 		party := "PartyInvite"
 
-		_, error := db.Pool.Exec(context.Background(), "INSERT INTO notifications (recipient_id, sender_id, type ) VALUES ($1, $2, $3);", recipientID, senderId, party)
+		_, error := db.Pool.Exec(context.Background(), "INSERT INTO notifications (recipient_id, sender_id, type ) VALUES ($1, $2, $3);", recipientID, u.UserID, party)
 		if error != nil {
 			fmt.Fprintf(os.Stderr, "Insert failed: %v\n", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
+
+		//Here we need to put notifications into a struct
+		var notifications []Notification
+
+		notifications = append(notifications, Notification{
+			Sender_id:         u.UserID,
+			Notification_type: party,
+		})
+
+		msgJson, err := json.Marshal(notifications)
+		if err != nil {
+			return
+		}
+		s.Publish(context.Background(), u.UserID, msgJson)
+
+		//to DO need to get Notification IDS so we can Query it Fast No Cap
+
 	}
 
 }

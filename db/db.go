@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+
 	"fmt"
 	"os"
 	"sync"
@@ -23,8 +24,8 @@ type Store interface {
 	Add(ctx context.Context, key string, value string, expiration time.Duration) error
 	Get(ctx context.Context, key string) (string, error)
 	Delete(ctx context.Context, key string) error
-	Subscribe(ctx context.Context, channel string) error
-	Publish(ctx context.Context, channel string, message string) error
+	Subscribe(ctx context.Context, channel string, handler func(message string)) error
+	Publish(ctx context.Context, channel string, message []byte) error
 	Expire(ctx context.Context, key string, expiration time.Duration) error
 }
 
@@ -35,7 +36,7 @@ func NewRedisInstance(redis *redis.Client) Store {
 // adding stuff type shit
 
 func (s *store) Expire(ctx context.Context, key string, expiration time.Duration) error {
-	err := s.client.Expire(ctx, key, expiration)
+	err := s.client.Expire(ctx, key, expiration).Err()
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +44,7 @@ func (s *store) Expire(ctx context.Context, key string, expiration time.Duration
 }
 
 func (s *store) Delete(ctx context.Context, key string) error {
-	err := s.client.Del(ctx, key)
+	err := s.client.Del(ctx, key).Err()
 	if err != nil {
 		panic(err)
 	}
@@ -72,20 +73,31 @@ func (s *store) Get(ctx context.Context, key string) (string, error) {
 }
 
 // pub sub type shit
-func (s *store) Publish(ctx context.Context, channel string, message string) error {
+func (s *store) Publish(ctx context.Context, channel string, message []byte) error {
 
-	err := s.client.Publish(ctx, channel, message)
+	err := s.client.Publish(ctx, channel, message).Err()
 	if err != nil {
-		panic(err)
+		return err
 	}
+
 	return nil
 }
 
-func (s *store) Subscribe(ctx context.Context, channel string) error {
-	err := s.client.Subscribe(ctx, channel)
-	if err != nil {
-		panic(err)
+func (s *store) Subscribe(ctx context.Context, channel string, handler func(message string)) error {
+	pubsub := s.client.Subscribe(ctx, channel)
+
+	defer pubsub.Close()
+
+	ch := pubsub.Channel()
+
+	for msg := range ch {
+		fmt.Println(msg.Channel, msg.Payload)
+		handler(msg.Payload)
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 

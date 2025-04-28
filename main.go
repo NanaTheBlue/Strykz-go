@@ -28,7 +28,7 @@ func main() {
 	http.HandleFunc("/login", auth.Login())
 
 	http.HandleFunc("/logout", auth.Logout())
-	http.HandleFunc("/invite", auth.Rate(auth.AuthMiddleware(social.PartyInvite()), 5, 10))
+	http.HandleFunc("/invite", auth.Rate(auth.AuthMiddleware(social.PartyInvite(store)), 5, 10))
 	http.HandleFunc("/online", auth.Cors(auth.WSAuth(social.SetOnlineStatus(store))))
 	http.HandleFunc("/updatepfp", strykzaws.ChangeProfilePicture())
 

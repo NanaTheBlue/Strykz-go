@@ -19,7 +19,9 @@ import (
 )
 
 type Notification struct {
+	Notification_id   string `json:"sender"`
 	Sender_id         string `json:"sender"`
+	Recipient_id      string `json:"sender"`
 	Notification_type string `json:"notification_type"`
 }
 
@@ -30,7 +32,26 @@ func heartBeat(p []byte) bool {
 	return false
 }
 
-func CheckNotifications(ctx context.Context) error {
+func SubscribeToChannel(ctx context.Context, s db.Store) {
+	u, ok := ctx.Value(auth.UserKey).(auth.User)
+	if !ok {
+		fmt.Println("user not found in context")
+		return
+	}
+
+	s.Subscribe(context.Background(), "onlineUsers", func(message string) {
+		msgJSON, err := json.Marshal(message)
+		if err != nil {
+			log.Printf("Error marshalling message to JSON: %v", err)
+			return
+		}
+
+		sendNotifications(u.UserID, msgJSON)
+	})
+
+}
+
+func checkNotifications(ctx context.Context) error {
 	u, ok := ctx.Value(auth.UserKey).(auth.User)
 	if !ok {
 		fmt.Println("user not found in context")
@@ -71,8 +92,14 @@ func CheckNotifications(ctx context.Context) error {
 	}
 	//fmt.Printf("%+v\n", notifications)
 
-	if sendToClient(u.UserID, notifications) != nil {
-		failed := errors.New("WRONG MESSAGE")
+	msgJSON, err := json.Marshal(notifications)
+	if err != nil {
+		log.Printf("Error marshalling message to JSON: %v", err)
+		return err
+	}
+
+	if sendNotifications(u.UserID, msgJSON) != nil {
+		failed := errors.New("Error Sending to Client")
 		return failed
 	}
 
@@ -80,23 +107,16 @@ func CheckNotifications(ctx context.Context) error {
 
 }
 
-// Maybe should make a function that marshalls json since im using it twice so far
-
-func sendToClient(userID string, message []Notification) error {
+func sendNotifications(userID string, message []byte) error {
 
 	value, ok := onlineUsers.Load(userID)
 	if !ok {
-		fmt.Println("inside sendToClient")
-	}
-
-	msgJSON, errr := json.Marshal(message)
-	if errr != nil {
-		log.Printf("Error marshalling message to JSON: %v", errr)
-		return errr
+		failed := errors.New("User Likely not in the map")
+		return failed
 	}
 
 	client := value.(*Client)
-	err := client.Conn.WriteMessage(websocket.TextMessage, msgJSON)
+	err := client.Conn.WriteMessage(websocket.TextMessage, message)
 	if err != nil {
 		log.Println("Failed to send message:", err)
 		return err
@@ -110,11 +130,12 @@ func reader(s db.Store, userID string, conn *websocket.Conn) {
 	defer func() {
 		onlineUsers.Delete(userID)
 		s.Delete(context.Background(), userID)
-		s.Publish(context.Background(), "onlineUsers", fmt.Sprintf("%s disconnected", userID))
+		//s.Publish(context.Background(), "onlineUsers", fmt.Sprintf("%s disconnected", userID))
 		broadcast(fmt.Sprintf("%s disconnected", userID))
 		conn.Close()
 	}()
 	messageTime := time.Now()
+	//s.Publish(context.Background(), "onlineUsers", userID)
 
 	for {
 		messageType, p, err := conn.ReadMessage()
@@ -145,6 +166,7 @@ func reader(s db.Store, userID string, conn *websocket.Conn) {
 		broadcast(string(p))
 
 	}
+
 }
 
 // Change this to iterate over the Redis Cluster  and send a message if a user joins or Leaves IT
