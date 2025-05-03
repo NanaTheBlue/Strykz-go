@@ -19,9 +19,9 @@ import (
 )
 
 type Notification struct {
-	Notification_id   string `json:"sender"`
+	Notification_id   string `json:"notification_id"`
 	Sender_id         string `json:"sender"`
-	Recipient_id      string `json:"sender"`
+	Recipient_id      string `json:"recipient"`
 	Notification_type string `json:"notification_type"`
 }
 
@@ -62,7 +62,7 @@ func checkNotifications(ctx context.Context) error {
 
 	// should prob get the notification ID and put that in the struct can use it to map over the mf aswell
 	fmt.Println(u.UserID)
-	rows, err := db.Pool.Query(context.Background(), "SELECT sender_id, type FROM notifications WHERE recipient_id = $1", u.UserID)
+	rows, err := db.Pool.Query(context.Background(), "SELECT sender_id, type, notification_id FROM notifications WHERE recipient_id = $1", u.UserID)
 	if err != nil {
 		return err
 	}
@@ -72,11 +72,13 @@ func checkNotifications(ctx context.Context) error {
 	for rows.Next() {
 		var sender_id string
 		var notification_type string
-		err = rows.Scan(&sender_id, &notification_type)
+		var notification_id string
+		err = rows.Scan(&sender_id, &notification_type, &notification_id)
 		if err != nil {
 			return err
 		}
 		notifications = append(notifications, Notification{
+			Notification_id:   notification_id,
 			Sender_id:         sender_id,
 			Notification_type: notification_type,
 		})

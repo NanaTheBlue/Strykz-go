@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strykz/auth"
 	"strykz/db"
@@ -21,6 +22,12 @@ func main() {
 	db.InitDB()
 
 	defer db.CloseDB()
+
+	publisher, err := que.NewPublisher("amqp://guest:guest@localhost:5672/")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer publisher.Close()
 
 	http.HandleFunc("/register", auth.Rate(auth.Register(), 2, 5))
 	//http.HandleFunc("/login", auth.Cors(auth.Rate(auth.Login(), 5, 10)))

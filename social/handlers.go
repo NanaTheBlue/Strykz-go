@@ -88,9 +88,7 @@ func PartyInvite(s db.Store) http.HandlerFunc {
 			http.Error(w, "Invalid method", er)
 			return
 		}
-		//reFactor this dont work since i migrated to using a struct
 
-		//
 		u, ok := r.Context().Value(auth.UserKey).(auth.User)
 		if !ok {
 			http.Error(w, "Username not found", http.StatusInternalServerError)
@@ -105,8 +103,8 @@ func PartyInvite(s db.Store) http.HandlerFunc {
 		}
 
 		var recipientID string
-
-		err := db.Pool.QueryRow(context.Background(),
+		// Should think about having the users ids accesible when doing a party invite so i dont have to query for a username
+		err := db.Pool.QueryRow(r.Context(),
 			"SELECT id FROM users WHERE username = $1", username).Scan(&recipientID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "User lookup failed: %v\n", err)
@@ -116,18 +114,21 @@ func PartyInvite(s db.Store) http.HandlerFunc {
 
 		party := "PartyInvite"
 
-		_, error := db.Pool.Exec(context.Background(), "INSERT INTO notifications (recipient_id, sender_id, type ) VALUES ($1, $2, $3);", recipientID, u.UserID, party)
-		if error != nil {
+		id, err := db.Pool.Exec(r.Context(), "INSERT INTO notifications (recipient_id, sender_id, type ) VALUES ($1, $2, $3) RETURNING notification_id;", recipientID, u.UserID, party)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Insert failed: %v\n", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 
+		fmt.Println(id.String())
 		//Here we need to put notifications into a struct
 		var notifications []Notification
 
 		notifications = append(notifications, Notification{
+			Notification_id:   id.String(),
 			Sender_id:         u.UserID,
+			Recipient_id:      recipientID,
 			Notification_type: party,
 		})
 
@@ -135,7 +136,7 @@ func PartyInvite(s db.Store) http.HandlerFunc {
 		if err != nil {
 			return
 		}
-		s.Publish(context.Background(), u.UserID, msgJson)
+		s.Publish(r.Context(), u.UserID, msgJson)
 
 		//to DO need to get Notification IDS so we can Query it Fast No Cap
 

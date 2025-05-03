@@ -20,6 +20,7 @@ var (
 type store struct {
 	client *redis.Client
 }
+
 type Store interface {
 	Add(ctx context.Context, key string, value string, expiration time.Duration) error
 	Get(ctx context.Context, key string) (string, error)
