@@ -174,6 +174,8 @@ func reader(s db.Store, userID string, conn *websocket.Conn) {
 // Change this to iterate over the Redis Cluster  and send a message if a user joins or Leaves IT
 func broadcast(message string) {
 
+	// wait isnt this redundant now that im using Redis, can just have all users subscribe to like a public channel or something
+	// and publish messages there that need to be sent to all users  this approach should be more efficent aswell Thats BUSSIN!!
 	onlineUsers.Range(func(key, value interface{}) bool {
 
 		user := value.(*Client)
@@ -195,4 +197,8 @@ func broadcast(message string) {
 		}
 		return true
 	})
+}
+
+func handlePartyInvite(notification Notification) {
+
 }

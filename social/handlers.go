@@ -11,6 +11,7 @@ import (
 	"strykz/db"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -63,7 +64,11 @@ func SetOnlineStatus(s db.Store) http.HandlerFunc {
 			return
 		}
 		log.Println("Client Connected to Websocket")
-		s.Add(context.Background(), user.UserID, user.UserName, 60)
+		value, err := json.Marshal(user.UserName)
+		if err != nil {
+			return
+		}
+		s.Add(context.Background(), user.UserID, value, 60)
 
 		onlineUsers.Store(user.UserID, &Client{
 			UserID: user.UserID,
@@ -113,20 +118,16 @@ func PartyInvite(s db.Store) http.HandlerFunc {
 		}
 
 		party := "PartyInvite"
+		id := uuid.New().String()
 
-		id, err := db.Pool.Exec(r.Context(), "INSERT INTO notifications (recipient_id, sender_id, type ) VALUES ($1, $2, $3) RETURNING notification_id;", recipientID, u.UserID, party)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Insert failed: %v\n", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
+		//Instead of inserting the party invite here can prob just put it in a redis set
 
-		fmt.Println(id.String())
+		fmt.Println(id)
 		//Here we need to put notifications into a struct
 		var notifications []Notification
 
 		notifications = append(notifications, Notification{
-			Notification_id:   id.String(),
+			Notification_id:   id,
 			Sender_id:         u.UserID,
 			Recipient_id:      recipientID,
 			Notification_type: party,
@@ -136,10 +137,39 @@ func PartyInvite(s db.Store) http.HandlerFunc {
 		if err != nil {
 			return
 		}
+		s.Add(r.Context(), id, msgJson, 300)
 		s.Publish(r.Context(), u.UserID, msgJson)
 
 		//to DO need to get Notification IDS so we can Query it Fast No Cap
 
+	}
+
+}
+
+func acceptNotification(s db.Store) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			er := http.StatusMethodNotAllowed
+			http.Error(w, "Invalid method", er)
+			return
+		}
+		var notification Notification
+		err := json.NewDecoder(r.Body).Decode(&notification)
+		if err != nil {
+			http.Error(w, "User not found", http.StatusBadRequest)
+			return
+		}
+		// prob gonna change this up here a bit later but atm we just deal with party invites in the API
+		if notification.Notification_id == "PartyInvite" {
+			handlePartyInvite(notification)
+			// do thing
+		} else {
+			http.Error(w, "User not found", http.StatusBadRequest)
+			return
+		}
+
+		return
 	}
 
 }

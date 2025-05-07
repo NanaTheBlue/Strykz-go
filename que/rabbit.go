@@ -2,6 +2,7 @@ package que
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -22,6 +23,7 @@ func NewPublisher(uri string) (Rabbit, error) {
 	failOnError(err, "Failed to connect to RabbitMQ")
 	ch, err := conn.Channel()
 	failOnError(err, "Failed to open a channel")
+	fmt.Println("We Connected To Rabbit!!!!")
 	return &rabbit{conn: conn, ch: ch}, nil
 }
 

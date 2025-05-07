@@ -1,0 +1,5 @@
+package que
+
+func queProcessor() {
+
+}

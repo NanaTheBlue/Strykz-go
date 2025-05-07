@@ -3,7 +3,6 @@ package que
 import (
 	"log"
 	"net/http"
-	"sync"
 
 	"github.com/gorilla/websocket"
 )
@@ -11,6 +10,21 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+}
+
+type Client struct {
+	UserID string
+	Conn   *websocket.Conn
+}
+
+type player struct {
+	userID   string
+	userName string
+	elo      int
+	steamId  int
+}
+type party struct {
+	players []player
 }
 
 func reader(conn *websocket.Conn) {
@@ -29,8 +43,6 @@ func reader(conn *websocket.Conn) {
 	}
 }
 
-var quemap sync.Map
-
 func QuePlayer() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
@@ -41,7 +53,7 @@ func QuePlayer() http.HandlerFunc {
 			return
 		}
 		log.Println("Client Connected to Websocket")
-		//Use conn to send and receive messages.
+
 		reader(ws)
 
 	}
