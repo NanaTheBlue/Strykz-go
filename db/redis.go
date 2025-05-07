@@ -19,6 +19,7 @@ type Store interface {
 	Subscribe(ctx context.Context, channel string, handler func(message string)) error
 	Publish(ctx context.Context, channel string, message []byte) error
 	Expire(ctx context.Context, key string, expiration time.Duration) error
+	Count(ctx context.Context, key string) (int64, error)
 }
 
 func NewRedisInstance(redis *redis.Client) Store {
@@ -33,6 +34,15 @@ func (s *store) Expire(ctx context.Context, key string, expiration time.Duration
 		panic(err)
 	}
 	return nil
+}
+
+func (s *store) Count(ctx context.Context, key string) (int64, error) {
+	count, err := s.client.SCard(ctx, key).Result()
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }
 
 func (s *store) Delete(ctx context.Context, key string) error {

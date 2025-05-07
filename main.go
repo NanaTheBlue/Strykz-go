@@ -38,6 +38,7 @@ func main() {
 	http.HandleFunc("/invite", auth.Rate(auth.AuthMiddleware(social.PartyInvite(store)), 5, 10))
 	http.HandleFunc("/online", auth.Cors(auth.WSAuth(social.SetOnlineStatus(store))))
 	http.HandleFunc("/updatepfp", strykzaws.ChangeProfilePicture())
+	http.HandleFunc("/acceptnotification", auth.Rate(auth.AuthMiddleware(social.AcceptNotification(store)), 1, 4))
 
 	// uncomment later testing stuff http.HandleFunc("/online", auth.Rate(auth.AuthMiddleware(social.SetOnlineStatus()), 5, 10))
 	http.HandleFunc("/que", auth.Rate(auth.WSAuth(que.QuePlayer()), 5, 10))

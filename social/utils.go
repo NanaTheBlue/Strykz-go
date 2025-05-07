@@ -11,6 +11,7 @@ import (
 
 	"log"
 
+	"net/http"
 	"strykz/auth"
 	"strykz/db"
 	"time"
@@ -199,6 +200,35 @@ func broadcast(message string) {
 	})
 }
 
-func handlePartyInvite(notification Notification) {
+func handlePartyInvite(ctx context.Context, w http.ResponseWriter, s db.Store, user auth.User, notification Notification) {
+	userId := user.UserID
+	partyID := notification.Sender_id
+	partyKey := "party:" + partyID + ":members"
+	userPartyKey := "user:" + userId + ":party"
+
+	userBytes := []byte(userId)
+	partyBytes := []byte(partyID)
+
+	count, err := s.Count(ctx, partyKey)
+	if err != nil {
+		http.Error(w, "Error", http.StatusBadRequest)
+		return
+	}
+	// Party cant have more than 5 people so
+	if count == 5 {
+		http.Error(w, "Party Is Full", http.StatusBadRequest)
+		return
+	}
+
+	// add user to party
+	err = s.Add(ctx, "party:"+partyID+":user", userBytes, 24*time.Hour)
+	if err != nil {
+		return
+	}
+
+	// this is so we can Lookup what party a user is in Fast
+	if err := s.Add(ctx, userPartyKey, partyBytes, 24*time.Hour); err != nil {
+		return
+	}
 
 }

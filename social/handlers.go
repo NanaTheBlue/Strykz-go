@@ -146,12 +146,19 @@ func PartyInvite(s db.Store) http.HandlerFunc {
 
 }
 
-func acceptNotification(s db.Store) http.HandlerFunc {
+func AcceptNotification(s db.Store) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			er := http.StatusMethodNotAllowed
 			http.Error(w, "Invalid method", er)
+			return
+		}
+
+		user, ok := r.Context().Value(auth.UserKey).(auth.User)
+
+		if !ok {
+			http.Error(w, "User not found", http.StatusInternalServerError)
 			return
 		}
 		var notification Notification
@@ -162,10 +169,10 @@ func acceptNotification(s db.Store) http.HandlerFunc {
 		}
 		// prob gonna change this up here a bit later but atm we just deal with party invites in the API
 		if notification.Notification_id == "PartyInvite" {
-			handlePartyInvite(notification)
+			handlePartyInvite(r.Context(), w, s, user, notification)
 			// do thing
 		} else {
-			http.Error(w, "User not found", http.StatusBadRequest)
+			http.Error(w, "Invalid Notification Type", http.StatusBadRequest)
 			return
 		}
 
