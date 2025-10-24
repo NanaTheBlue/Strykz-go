@@ -21,6 +21,7 @@ func (s *matchmakingService) InQue(ctx context.Context, player *models.Player) e
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
