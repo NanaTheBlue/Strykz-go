@@ -29,10 +29,14 @@ func validatePassword(password string, confirmpassword string) error {
 
 	// Just basic password validation for now
 	if len(password) < 8 {
-		return errors.New("Password Length Is To Short")
+		return errors.New("password length is to short")
+
+	} else if len(password) > 16 {
+		return errors.New("password length is to long")
 	}
+
 	if password != confirmpassword {
-		return errors.New("Passwords Dont Match")
+		return errors.New("passwords dont match")
 	}
 
 	return nil
@@ -41,7 +45,7 @@ func validatePassword(password string, confirmpassword string) error {
 func validateEmail(email string) error {
 	var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 	if !emailRegex.MatchString(email) {
-		return errors.New("Invalid Email Format")
+		return errors.New("invalid email format")
 	}
 
 	return nil

@@ -4,12 +4,14 @@ import (
 	"net/http"
 
 	authapi "github.com/nanagoboiler/internal/api/auth"
-	favorapi "github.com/nanagoboiler/internal/api/favors"
+	matchmakingapi "github.com/nanagoboiler/internal/api/que"
+	"github.com/nanagoboiler/internal/matchmaking"
+
 	"github.com/nanagoboiler/internal/auth"
 	"github.com/nanagoboiler/internal/bootstrap"
-	"github.com/nanagoboiler/internal/favors"
+
 	authrepo "github.com/nanagoboiler/internal/repository/auth"
-	favorsrepo "github.com/nanagoboiler/internal/repository/favors"
+	redis "github.com/nanagoboiler/internal/repository/redis"
 
 	"context"
 )
@@ -21,29 +23,38 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	redisClient := redis.InitRedis()
 
 	// Repositories
 	authRepo := authrepo.NewUserRepository(pool)
 	tokenRepo := authrepo.NewTokensRepository(pool)
-	favorRepo := favorsrepo.NewFavorsRepository(pool)
+	redisRepo := redis.NewRedisInstance(redisClient)
 
 	// Services
 	authService := auth.NewAuthService(authRepo, tokenRepo)
-	favorService := favors.NewFavorService(authRepo, favorRepo)
+	matchmakingService := matchmaking.NewMatchmakingService(redisRepo)
 
-	// Handlers
+	// Auth Handlers
 	authRegister := authapi.Register(authService)
 	authLogin := authapi.Login(authService)
-	bingus := authapi.Health()
 	renew := authapi.Renew(authService)
-	createFavor := favorapi.Create(favorService)
 
-	//Routes
-	router.HandleFunc("POST /create", auth.AuthMiddleware(createFavor))
+	//Health Handler
+	health := authapi.Health()
+
+	//MatchMaking Handlers
+	inQue := matchmakingapi.Que(matchmakingService)
+
+	//Auth Routes
 	router.HandleFunc("POST /register/", authRegister)
 	router.HandleFunc("POST /login/", authLogin)
-	router.HandleFunc("POST /health/", bingus)
 	router.HandleFunc("GET /renew/", renew)
+
+	//Health Routes
+	router.HandleFunc("POST /health/", health)
+
+	//Matchmaking Routes
+	router.HandleFunc("POST /que/", inQue)
 
 	println("Server Listening on Port 8085")
 	http.ListenAndServe(":8085", router)

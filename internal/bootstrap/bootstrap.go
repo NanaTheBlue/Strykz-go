@@ -31,3 +31,5 @@ func NewPostgresPool(ctx context.Context) (*pgxpool.Pool, error) {
 	return pool, nil
 
 }
+
+func newRedisInstance()

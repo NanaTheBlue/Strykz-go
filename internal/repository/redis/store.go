@@ -2,9 +2,11 @@ package redis
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/nanagoboiler/models"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -85,6 +87,81 @@ func (s *store) Subscribe(ctx context.Context, channel string, handler func(mess
 			return err
 		}
 	}
+
+	return nil
+}
+
+func (s *store) Que(ctx context.Context, mode string, region string, player *models.Player) error {
+	playerBytes, err := json.Marshal(player)
+	if err != nil {
+		return fmt.Errorf("failed to serialize player: %w", err)
+	}
+
+	queueKey := fmt.Sprintf("queue:%s:%s", mode, region)
+	indexKey := fmt.Sprintf("queue_index:%s", player.Player_id)
+
+	pipe := s.client.TxPipeline()
+
+	pipe.ZAdd(ctx, queueKey, redis.Z{
+		Score:  float64(player.JoinedAt),
+		Member: string(playerBytes),
+	})
+
+	pipe.Set(ctx, indexKey, string(playerBytes), 30*time.Minute)
+
+	if _, err := pipe.Exec(ctx); err != nil {
+		return fmt.Errorf("failed to queue player: %w", err)
+	}
+
+	return nil
+
+}
+
+func (s *store) DeQue(ctx context.Context, mode string, region string, count int) ([]*models.Player, error) {
+	queueKey := fmt.Sprintf("queue:%s:%s", mode, region)
+
+	playerBytes, err := s.client.ZRange(ctx, queueKey, 0, int64(count-1)).Result()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read from queue: %w", err)
+	}
+
+	if len(playerBytes) == 0 {
+		return nil, nil
+	}
+
+	if err := s.client.ZRemRangeByRank(ctx, queueKey, 0, int64(count-1)).Err(); err != nil {
+		return nil, fmt.Errorf("failed to remove players from queue: %w", err)
+	}
+
+	var players []*models.Player
+	for _, pb := range playerBytes {
+		var p models.Player
+		if err := json.Unmarshal([]byte(pb), &p); err != nil {
+			continue
+		}
+		players = append(players, &p)
+	}
+
+	return players, nil
+
+}
+
+func (s *store) DeQuePlayer(ctx context.Context, mode string, region string, playerID string) error {
+	queueKey := fmt.Sprintf("queue:%s:%s", mode, region)
+	indexKey := fmt.Sprintf("queue_index:%s", playerID)
+
+	member, err := s.client.Get(ctx, indexKey).Result()
+	if err == redis.Nil {
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("failed to lookup player: %w", err)
+	}
+
+	if err := s.client.ZRem(ctx, queueKey, member).Err(); err != nil {
+		return fmt.Errorf("failed to remove player from queue: %w", err)
+	}
+
+	s.client.Del(ctx, indexKey)
 
 	return nil
 }

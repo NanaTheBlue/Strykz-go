@@ -9,16 +9,21 @@ type User struct {
 	PasswordHash string `json:"-"`
 }
 
+type Player struct {
+	Player_id string `json:"player_id"`
+	JoinedAt  int64  `json:"joined_at"`
+}
+
+type Match struct {
+	Id      string   `json:"id"`
+	Players []Player `json:"players"`
+}
+
 type RegisterRequest struct {
 	Username        string `json:"username"`
 	Email           string `json:"email"`
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirmpassword"`
-}
-
-type RelationShipRequest struct {
-	Inviter string `json:"inviter"`
-	Invitee string `json:"invitee"`
 }
 
 type LoginRequest struct {
@@ -32,12 +37,6 @@ type RefreshToken struct {
 type Tokens struct {
 	Auth_token    string
 	Refresh_token string
-}
-
-type FavorRequest struct {
-	Creator_id   string `json:"creator"`
-	Recipient_id string `json:"recipient"`
-	Favor_text   string `json:"favortext"`
 }
 
 type AuthClaims struct {
