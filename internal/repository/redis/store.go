@@ -142,6 +142,19 @@ func (s *store) DeQue(ctx context.Context, mode string, region string, count int
 		players = append(players, &p)
 	}
 
+	// adds the Players back in if count is less than needed
+	if len(players) < count {
+		pipe := s.client.Pipeline()
+		for _, p := range players {
+			playerJSON, _ := json.Marshal(p)
+			pipe.ZAdd(ctx, queueKey, redis.Z{
+				Score:  float64(time.Now().Unix()),
+				Member: playerJSON,
+			})
+		}
+		return nil, nil
+	}
+
 	return players, nil
 
 }

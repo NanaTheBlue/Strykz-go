@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nanagoboiler/internal/auth"
+	"github.com/nanagoboiler/internal/services/auth"
 	"github.com/nanagoboiler/models"
 )
 

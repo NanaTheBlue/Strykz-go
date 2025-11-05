@@ -5,10 +5,10 @@ import (
 
 	authapi "github.com/nanagoboiler/internal/api/auth"
 	matchmakingapi "github.com/nanagoboiler/internal/api/que"
-	"github.com/nanagoboiler/internal/matchmaking"
+	"github.com/nanagoboiler/internal/services/matchmaking"
 
-	"github.com/nanagoboiler/internal/auth"
 	"github.com/nanagoboiler/internal/bootstrap"
+	"github.com/nanagoboiler/internal/services/auth"
 
 	authrepo "github.com/nanagoboiler/internal/repository/auth"
 	redis "github.com/nanagoboiler/internal/repository/redis"

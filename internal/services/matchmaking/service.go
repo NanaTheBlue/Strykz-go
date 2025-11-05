@@ -3,6 +3,12 @@ package matchmaking
 import (
 	"context"
 
+	"fmt"
+
+	"log"
+	"time"
+
+	"github.com/google/uuid"
 	"github.com/nanagoboiler/internal/repository/redis"
 	"github.com/nanagoboiler/models"
 )
@@ -43,4 +49,39 @@ func (s *matchmakingService) DeQuePlayer(ctx context.Context, mode string, regio
 	}
 
 	return nil
+}
+
+func (s *matchmakingService) StartMatchMaking(ctx context.Context) {
+	regions := []string{"us"}
+	modes := []string{"1v1"}
+
+	for {
+		for _, mode := range modes {
+			for _, region := range regions {
+				queueKey := fmt.Sprintf("queue:%s:%s", mode, region)
+
+				matchCandidates, err := s.DeQue(ctx, queueKey, region, 2)
+				if err != nil {
+					log.Printf("Error reading from queue %s: %v", queueKey, err)
+					continue
+				}
+
+				if matchCandidates == nil {
+					log.Printf("No candidates found")
+					time.Sleep(5 * time.Second)
+					continue
+				}
+
+				player1 := matchCandidates[0]
+				player2 := matchCandidates[1]
+
+				matchID := uuid.New().String()
+				log.Printf("Creating match %s between %s and %s", matchID, player1.Player_id, player2.Player_id)
+
+			}
+
+		}
+
+	}
+
 }
