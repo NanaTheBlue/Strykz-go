@@ -12,7 +12,7 @@ type Store interface {
 	Get(ctx context.Context, key string) (string, error)
 	Delete(ctx context.Context, key string) error
 	Subscribe(ctx context.Context, channel string, handler func(message string)) error
-	Publish(ctx context.Context, channel string, message []byte) error
+	Publish(ctx context.Context, channel string, message models.Notification) error
 	Expire(ctx context.Context, key string, expiration time.Duration) error
 	Count(ctx context.Context, key string) (int64, error)
 

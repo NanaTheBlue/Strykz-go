@@ -63,14 +63,14 @@ func (s *store) Get(ctx context.Context, key string) (string, error) {
 	return val, nil
 }
 
-func (s *store) Publish(ctx context.Context, channel string, message []byte) error {
-
-	err := s.client.Publish(ctx, channel, message).Err()
+func (s *store) Publish(ctx context.Context, channel string, message models.Notification) error {
+	payload, err := json.Marshal(message)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	return s.client.Publish(ctx, channel, payload).Err()
+
 }
 
 func (s *store) Subscribe(ctx context.Context, channel string, handler func(message string)) error {

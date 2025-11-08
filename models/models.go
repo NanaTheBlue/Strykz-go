@@ -19,6 +19,12 @@ type Match struct {
 	Players []Player `json:"players"`
 }
 
+type Notification struct {
+	UserID string `json:"id"`
+	Type   string `json:"type"`
+	Data   string `json:"data"`
+}
+
 type RegisterRequest struct {
 	Username        string `json:"username"`
 	Email           string `json:"email"`
