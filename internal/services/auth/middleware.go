@@ -12,8 +12,6 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		csrfToken, errr := r.Cookie("csrf_token")
 		csrfTokenHeader := r.Header.Get("X-CSRF-TOKEN")
-		type contextKey string
-		const userContextKey = contextKey("user")
 
 		if err != nil || errr != nil {
 			log.Println(err)
@@ -33,7 +31,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), userContextKey, user)
+		ctx := context.WithValue(r.Context(), UserContextKey, user)
 
 		log.Println(user.Username)
 

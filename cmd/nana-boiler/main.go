@@ -12,6 +12,7 @@ import (
 
 	authrepo "github.com/nanagoboiler/internal/repository/auth"
 	redis "github.com/nanagoboiler/internal/repository/redis"
+	"github.com/nanagoboiler/internal/services/notifications"
 
 	"context"
 )
@@ -33,6 +34,7 @@ func main() {
 	// Services
 	authService := auth.NewAuthService(authRepo, tokenRepo)
 	matchmakingService := matchmaking.NewMatchmakingService(redisRepo)
+	hub := notifications.NewHub()
 
 	// Auth Handlers
 	authRegister := authapi.Register(authService)
