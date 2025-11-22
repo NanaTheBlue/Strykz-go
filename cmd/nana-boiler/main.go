@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	authapi "github.com/nanagoboiler/internal/api/auth"
+	notificationsapi "github.com/nanagoboiler/internal/api/notifications"
 	matchmakingapi "github.com/nanagoboiler/internal/api/que"
 	"github.com/nanagoboiler/internal/services/matchmaking"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/nanagoboiler/internal/services/auth"
 
 	authrepo "github.com/nanagoboiler/internal/repository/auth"
+	notificationrepo "github.com/nanagoboiler/internal/repository/notification"
 	redis "github.com/nanagoboiler/internal/repository/redis"
 	"github.com/nanagoboiler/internal/services/notifications"
 
@@ -30,16 +32,23 @@ func main() {
 	authRepo := authrepo.NewUserRepository(pool)
 	tokenRepo := authrepo.NewTokensRepository(pool)
 	redisRepo := redis.NewRedisInstance(redisClient)
+	notificationRepo := notificationrepo.NewNotificationsRepository(pool)
+
+	//Connection Manager
+	hub := notifications.NewHub()
 
 	// Services
 	authService := auth.NewAuthService(authRepo, tokenRepo)
 	matchmakingService := matchmaking.NewMatchmakingService(redisRepo)
-	hub := notifications.NewHub()
+	notificationService := notifications.NewnotificationsService(hub, redisRepo)
 
 	// Auth Handlers
 	authRegister := authapi.Register(authService)
 	authLogin := authapi.Login(authService)
 	renew := authapi.Renew(authService)
+
+	// Notification Handlers
+	notifications := notificationsapi.Notifications(notificationService)
 
 	//Health Handler
 	health := authapi.Health()
@@ -54,6 +63,9 @@ func main() {
 
 	//Health Routes
 	router.HandleFunc("POST /health/", health)
+
+	// Notification Routes
+	router.HandleFunc("GET /notification/", notifications)
 
 	//Matchmaking Routes
 	router.HandleFunc("POST /que/", inQue)
