@@ -32,6 +32,8 @@ func Notifications(s notifications.Service) http.HandlerFunc {
 		s.AddConnection(user.ID, conn)
 		defer conn.Close()
 
+		notifications, err := s.GetNotifications(r.Context(), user.ID)
+
 	}
 
 }

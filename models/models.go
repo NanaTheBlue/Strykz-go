@@ -20,9 +20,10 @@ type Match struct {
 }
 
 type Notification struct {
-	UserID string `json:"id"`
-	Type   string `json:"type"`
-	Data   string `json:"data"`
+	Sender_id    string `json:"sender_id"`
+	Recepient_id string `json: "recepient_id"`
+	Type         string `json:"type"`
+	Data         string `json:"data"`
 }
 
 type RegisterRequest struct {

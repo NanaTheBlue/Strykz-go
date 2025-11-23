@@ -40,7 +40,7 @@ func main() {
 	// Services
 	authService := auth.NewAuthService(authRepo, tokenRepo)
 	matchmakingService := matchmaking.NewMatchmakingService(redisRepo)
-	notificationService := notifications.NewnotificationsService(hub, redisRepo)
+	notificationService := notifications.NewnotificationsService(hub, redisRepo, notificationRepo)
 
 	// Auth Handlers
 	authRegister := authapi.Register(authService)
