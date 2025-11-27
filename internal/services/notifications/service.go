@@ -73,3 +73,13 @@ func (s *notificationsService) GetNotifications(ctx context.Context, userID stri
 	return notifications, nil
 
 }
+
+func (s *notificationsService) AcceptNotification(ctx context.Context, notif models.Notification) error {
+
+	if notif.Type == "FriendRequest" {
+		s.notificationrepo.IsFriends(ctx)
+	} else if notif.Type == "PartyInvite" {
+
+	}
+	return nil
+}

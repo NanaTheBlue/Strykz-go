@@ -12,20 +12,13 @@ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
 
 
-CREATE TABLE IF NOT EXISTS favor(
-favor_id UUID PRIMARY KEY,
-creator_id UUID REFERENCES users(id),
-recipient_id UUID REFERENCES users(id),
-favor_text TEXT,
-created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-);
 
 
-
-CREATE TABLE IF NOT EXISTS relationship(
-requester_id UUID REFERENCES users(id),
-addressee_id UUID REFERENCES users(id),
-relationship_status TEXT NOT NULL,
+CREATE TABLE IF NOT EXISTS notifications(
+requester_id UUID REFERENCES users(id) ON DELETE CASCADE,
+addressee_id UUID REFERENCES users(id) ON DELETE CASCADE,
+notification_status TEXT NOT NULL,
+notification_type TEXT NOT NULL,
 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
 PRIMARY KEY (requester_id, addressee_id),
@@ -34,6 +27,30 @@ CHECK (requester_id != addressee_id)
 
 
 
-)
+);
+
+
+CREATE TABLE IF NOT EXISTS friends (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    friend_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    PRIMARY KEY (user_id, friend_id),
+    CHECK (user_id <> friend_id),
+    CHECK (user_id < friend_id);
+);
+
+
+CREATE TABLE IF NOT EXISTS blocks (
+    blocker_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    blocked_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    PRIMARY KEY (blocker_id, blocked_id),
+    CHECK (blocker_id <> blocked_id)
+);
+
+
+
 
 

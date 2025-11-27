@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nanagoboiler/models"
 )
@@ -45,4 +46,26 @@ func (r *notificationsRepo) GetNotifications(ctx context.Context, uuid string) (
 
 	return notifications, nil
 
+}
+
+func (r *notificationsRepo) IsFriends(ctx context.Context, userID, user2ID string) (bool, error) {
+	var exists int
+
+	err := r.pool.QueryRow(ctx, `
+        SELECT 1
+        FROM friends
+        WHERE (user_id = $1 AND friend_id = $2)
+           OR (user_id = $2 AND friend_id = $1)
+        LIMIT 1;
+    `, userID, user2ID).Scan(&exists)
+
+	if err == pgx.ErrNoRows {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
