@@ -48,6 +48,42 @@ func (r *notificationsRepo) GetNotifications(ctx context.Context, uuid string) (
 
 }
 
+func (r *notificationsRepo) AddFriend(ctx context.Context, notif models.Notification) error {
+	a := notif.Sender_id
+	b := notif.Recepient_id
+
+	userID, friendID := a, b
+	if a > b {
+		userID, friendID = b, a
+	}
+
+	_, err := r.pool.Exec(
+		ctx,
+		"INSERT INTO friends (user_id, friend_id) VALUES ($1, $2)",
+		userID,
+		friendID,
+	)
+	return err
+}
+
+func (r *notificationsRepo) RemoveFriend(ctx context.Context, userID string, friendID string) error {
+	a := userID
+	b := friendID
+
+	user, friend := a, b
+	if a > b {
+		user, friend = b, a
+	}
+
+	_, err := r.pool.Exec(ctx, "DELETE FROM friends Where user_id = $1 AND friend_id = $2", user, friend)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+//todo add block functionality
+
 func (r *notificationsRepo) IsFriends(ctx context.Context, userID, user2ID string) (bool, error) {
 	var exists int
 
@@ -63,7 +99,7 @@ func (r *notificationsRepo) IsFriends(ctx context.Context, userID, user2ID strin
 		return false, nil
 	}
 
-	if err != nil {
+	if err != pgx.ErrNoRows || err != nil {
 		return false, err
 	}
 

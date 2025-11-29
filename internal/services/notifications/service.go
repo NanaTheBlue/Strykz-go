@@ -74,12 +74,28 @@ func (s *notificationsService) GetNotifications(ctx context.Context, userID stri
 
 }
 
+func (s *notificationsService) SendFriendRequest(ctx context.Context, notif models.Notification) error {
+
+	return nil
+}
+
 func (s *notificationsService) AcceptNotification(ctx context.Context, notif models.Notification) error {
 
 	if notif.Type == "FriendRequest" {
-		s.notificationrepo.IsFriends(ctx)
+		// add friends
+		err := s.notificationrepo.AddFriend(ctx, notif)
+		if err != nil {
+			return err
+		}
 	} else if notif.Type == "PartyInvite" {
 
+		// Join Party
+
 	}
+	return nil
+}
+
+func (s *notificationsService) RejectNotification(ctx context.Context, notif models.Notification) error {
+
 	return nil
 }
