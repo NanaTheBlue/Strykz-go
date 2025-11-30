@@ -17,9 +17,23 @@ func NewNotificationsRepository(pool *pgxpool.Pool) NotificationRepository {
 	return &notificationsRepo{pool: pool}
 }
 
+func (r *notificationsRepo) GetNotification(ctx context.Context, notificationID string) (models.Notification, error) {
+	var notification models.Notification
+	err := r.pool.QueryRow(ctx, "SELECT FROM notifications WHERE id =$1 ", notificationID).Scan(&notification.SenderID,
+		&notification.RecipientID,
+		&notification.Type,
+		&notification.Data,
+		&notification.CreatedAt)
+	if err != nil {
+		return models.Notification{}, err
+	}
+
+	return notification, nil
+}
+
 func (r *notificationsRepo) GetNotifications(ctx context.Context, uuid string) ([]models.Notification, error) {
 
-	rows, err := r.pool.Query(ctx, "SELECT * from notifications WHERE recipient = $1", uuid)
+	rows, err := r.pool.Query(ctx, "SELECT * FROM notifications WHERE recipient = $1", uuid)
 	if err != nil {
 		return nil, err
 	}
@@ -29,10 +43,11 @@ func (r *notificationsRepo) GetNotifications(ctx context.Context, uuid string) (
 	for rows.Next() {
 		var notification models.Notification
 		err := rows.Scan(
-			&notification.Sender_id,
-			&notification.Recepient_id,
+			&notification.SenderID,
+			&notification.RecipientID,
 			&notification.Type,
 			&notification.Data,
+			&notification.CreatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning notification row: %w", err)
@@ -49,8 +64,8 @@ func (r *notificationsRepo) GetNotifications(ctx context.Context, uuid string) (
 }
 
 func (r *notificationsRepo) AddFriend(ctx context.Context, notif models.Notification) error {
-	a := notif.Sender_id
-	b := notif.Recepient_id
+	a := notif.SenderID
+	b := notif.RecipientID
 
 	userID, friendID := a, b
 	if a > b {
@@ -80,6 +95,16 @@ func (r *notificationsRepo) RemoveFriend(ctx context.Context, userID string, fri
 		return err
 	}
 	return nil
+}
+
+func (r *notificationsRepo) DeleteNotification(ctx context.Context, notificationID string) error {
+
+	_, err := r.pool.Exec(ctx, "DELETE FROM notifications where id = $1", notificationID)
+	if err != nil {
+		return err
+	}
+	return nil
+
 }
 
 //todo add block functionality

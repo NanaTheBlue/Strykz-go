@@ -34,13 +34,13 @@ func (s *notificationsService) StartBackgroundListener(ctx context.Context) {
 				return
 			}
 
-			if notif.Recepient_id == "" {
+			if notif.RecipientID == "" {
 				fmt.Println("Missing Recepient ID in notification")
 				return
 			}
 
-			fmt.Printf("Sending to %s: %s\n", notif.Recepient_id, notif.Data)
-			if err := s.hub.Send(notif.Recepient_id, notif.Data); err != nil {
+			fmt.Printf("Sending to %s: %s\n", notif.RecipientID, notif.Data)
+			if err := s.hub.Send(notif.RecipientID, notif.Data); err != nil {
 				fmt.Println("Failed to send notification:", err)
 			}
 		})

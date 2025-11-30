@@ -1,6 +1,9 @@
 package notificationsapi
 
+// Would like to eventually rip this apart as its own micro service
+
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/websocket"
@@ -33,7 +36,34 @@ func Notifications(s notifications.Service) http.HandlerFunc {
 		defer conn.Close()
 
 		notifications, err := s.GetNotifications(r.Context(), user.ID)
+		if err != nil {
+			http.Error(w, "Failed to Retrieve Notifications", http.StatusBadRequest)
+			return
+		}
+		marshalled, err := json.Marshal(notifications)
+		if err != nil {
+			http.Error(w, "Failed to Marshal json", http.StatusBadRequest)
+			return
+		}
+		conn.WriteJSON(marshalled)
 
 	}
 
+}
+
+func AcceptNotification(s notifications.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+	}
+}
+
+func RejectNotification(s notifications.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, ok := r.Context().Value(auth.UserContextKey).(*models.User)
+		if !ok || user == nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+	}
 }

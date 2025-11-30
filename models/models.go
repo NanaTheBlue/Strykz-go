@@ -1,6 +1,10 @@
 package models
 
-import "github.com/golang-jwt/jwt/v5"
+import (
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+)
 
 type User struct {
 	ID           string `json:"id"`
@@ -20,12 +24,13 @@ type Match struct {
 }
 
 type Notification struct {
-	ID           string `json:"id"`
-	Sender_id    string `json:"sender_id"`
-	Recepient_id string `json: "recepient_id"`
-	Type         string `json:"type"`
-	Data         string `json:"data"`
-	Read         bool   `json:"read"`
+	ID          string    `json:"id"`
+	SenderID    string    `json:"sender_id"`
+	RecipientID string    `json:"recipient_id"`
+	Type        string    `json:"type"`
+	Data        string    `json:"data"`
+	Read        bool      `json:"read"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type RegisterRequest struct {
