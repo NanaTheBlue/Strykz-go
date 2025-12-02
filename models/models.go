@@ -32,6 +32,9 @@ type Notification struct {
 	Read        bool      `json:"read"`
 	CreatedAt   time.Time `json:"created_at"`
 }
+type BlockRequest struct {
+	Username string `json:"username"`
+}
 
 type RegisterRequest struct {
 	Username        string `json:"username"`

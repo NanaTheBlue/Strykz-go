@@ -67,3 +67,14 @@ func RejectNotification(s notifications.Service) http.HandlerFunc {
 
 	}
 }
+func BlockUser(s notifications.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req models.BlockRequest
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, "Invalid Request Json", http.StatusBadRequest)
+			return
+		}
+
+	}
+}
