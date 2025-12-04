@@ -63,6 +63,14 @@ func (s *notificationsService) SendNotification(ctx context.Context, notif model
 	return s.store.Publish(ctx, "notifications", notif)
 }
 
+func (s *notificationsService) DeleteNotification(ctx context.Context, notifID string) error {
+	err := s.notificationrepo.DeleteNotification(ctx, notifID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *notificationsService) GetNotifications(ctx context.Context, userID string) ([]models.Notification, error) {
 
 	notifications, err := s.notificationrepo.GetNotifications(ctx, userID)
@@ -72,30 +80,4 @@ func (s *notificationsService) GetNotifications(ctx context.Context, userID stri
 
 	return notifications, nil
 
-}
-
-func (s *notificationsService) SendFriendRequest(ctx context.Context, notif models.Notification) error {
-
-	return nil
-}
-
-func (s *notificationsService) AcceptNotification(ctx context.Context, notif models.Notification) error {
-
-	if notif.Type == "FriendRequest" {
-		// add friends
-		err := s.notificationrepo.AddFriend(ctx, notif)
-		if err != nil {
-			return err
-		}
-	} else if notif.Type == "PartyInvite" {
-
-		// Join Party
-
-	}
-	return nil
-}
-
-func (s *notificationsService) RejectNotification(ctx context.Context, notif models.Notification) error {
-
-	return nil
 }
