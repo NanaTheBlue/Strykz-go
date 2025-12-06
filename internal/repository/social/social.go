@@ -3,7 +3,6 @@ package socialrepo
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nanagoboiler/models"
 )
@@ -50,24 +49,48 @@ func (r *socialRepo) RemoveFriend(ctx context.Context, userID string, friendID s
 	return nil
 }
 
+func (r *socialRepo) IsBlocked(ctx context.Context, userID string, blockedID string) (bool, error) {
+	var exists bool
+	err := r.pool.QueryRow(ctx, `
+        SELECT EXISTS (
+            SELECT 1
+            FROM blocks
+            WHERE blocker_id = $1 AND blocked_id = $2
+        );
+    `, userID, blockedID).Scan(&exists)
+
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+
+}
+
+func (r *socialRepo) BlockUser(ctx context.Context, blockreq models.BlockRequest) error {
+	_, err := r.pool.Exec(ctx, "INSERT INTO blocks (blocker_id, blocked_id) VALUES ($1, $2)",
+		blockreq.BlockerID, blockreq.BlockedID,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *socialRepo) IsFriends(ctx context.Context, userID, user2ID string) (bool, error) {
-	var exists int
+	var exists bool
 
 	err := r.pool.QueryRow(ctx, `
-        SELECT 1
-        FROM friends
-        WHERE (user_id = $1 AND friend_id = $2)
-           OR (user_id = $2 AND friend_id = $1)
-        LIMIT 1;
+        SELECT EXISTS (
+            SELECT 1
+            FROM friends
+            WHERE (user_id = $1 AND friend_id = $2)
+               OR (user_id = $2 AND friend_id = $1)
+        );
     `, userID, user2ID).Scan(&exists)
 
-	if err == pgx.ErrNoRows {
-		return false, nil
-	}
-
-	if err != pgx.ErrNoRows || err != nil {
+	if err != nil {
 		return false, err
 	}
 
-	return true, nil
+	return exists, nil
 }

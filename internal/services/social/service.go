@@ -2,6 +2,7 @@ package social
 
 import (
 	"context"
+	"errors"
 
 	socialrepo "github.com/nanagoboiler/internal/repository/social"
 	"github.com/nanagoboiler/internal/services/notifications"
@@ -10,7 +11,7 @@ import (
 
 type socialService struct {
 	notificationservice notifications.Service
-	socialrepo socialrepo.SocialRepository
+	socialrepo          socialrepo.SocialRepository
 }
 
 func NewsocialService(notificationservice notifications.Service) Service {
@@ -28,6 +29,27 @@ func (s *socialService) SendFriendRequest(ctx context.Context, notif models.Noti
 	return nil
 }
 
+func (s *socialService) BlockUser(ctx context.Context, req models.BlockRequest) error {
+	if req.BlockerID == req.BlockedID {
+		return errors.New("cannot block yourself")
+	}
+	exists, err := s.socialrepo.IsBlocked(ctx, req.BlockerID, req.BlockedID)
+	if err != nil {
+		return err
+	}
+	if exists == true {
+		return nil
+	}
+
+	err = s.socialrepo.BlockUser(ctx, req)
+	if err != nil {
+		return err
+	}
+	// last step would be to push notification/remove friend if it exists
+
+	return nil
+}
+
 func (s *socialService) AcceptNotification(ctx context.Context, notif models.Notification) error {
 
 	if notif.Type == "FriendRequest" {
@@ -36,16 +58,11 @@ func (s *socialService) AcceptNotification(ctx context.Context, notif models.Not
 		if err != nil {
 			return err
 		}
-	} else if notif.Type == "PartyInvite" {-
-
-		// Join Party
-
 	}
 	return nil
 }
 
 func (s *socialService) RejectNotification(ctx context.Context, notif models.Notification) error {
-	err := s.notificationservice
 
 	return nil
 }

@@ -33,7 +33,8 @@ type Notification struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 type BlockRequest struct {
-	Username string `json:"username"`
+	BlockerID string `json:"blocker_id"`
+	BlockedID string `json:"blocked_id"`
 }
 
 type RegisterRequest struct {
