@@ -29,6 +29,18 @@ func (r *notificationsRepo) GetNotification(ctx context.Context, notificationID 
 
 	return notification, nil
 }
+func (r *notificationsRepo) SendNotification(ctx context.Context, notif models.Notification) error {
+
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO notifications (sender_id, addressee_id, notification_status, notification_type)
+     VALUES ($1, $2, $3, $4)`,
+		notif.SenderID, notif.RecipientID, notif.Status, notif.Type,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func (r *notificationsRepo) GetNotifications(ctx context.Context, uuid string) ([]models.Notification, error) {
 

@@ -29,7 +29,7 @@ type Notification struct {
 	RecipientID string    `json:"recipient_id"`
 	Type        string    `json:"type"`
 	Data        string    `json:"data"`
-	Read        bool      `json:"read"`
+	Status      string    `json:"status"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 type BlockRequest struct {
