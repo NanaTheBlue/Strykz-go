@@ -13,4 +13,5 @@ type Service interface {
 	RemoveConnection(userID string)
 	SendNotification(ctx context.Context, notif models.Notification) error
 	GetNotifications(ctx context.Context, userID string) ([]models.Notification, error)
+	DeleteNotification(ctx context.Context, notifID string) error
 }

@@ -45,24 +45,51 @@ func (s *socialService) BlockUser(ctx context.Context, req models.BlockRequest) 
 	if err != nil {
 		return err
 	}
-	// last step would be to push notification/remove friend if it exists
+
+	notif := models.Notification{
+		SenderID:    req.BlockerID,
+		RecipientID: req.BlockedID,
+		Type:        models.BlockNotification,
+		Data:        "",
+		Status:      "UnRead", // will make this a type later
+	}
+	err = s.notificationservice.SendNotification(ctx, notif)
+	if err != nil {
+		return err
+	}
+
+	err = s.socialrepo.RemoveFriend(ctx, req.BlockerID, req.BlockedID)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func (s *socialService) AcceptNotification(ctx context.Context, notif models.Notification) error {
 
-	if notif.Type == "FriendRequest" {
-		// add friends
+	switch notif.Type {
+	case models.FriendRequest:
 		err := s.socialrepo.AddFriend(ctx, notif)
 		if err != nil {
 			return err
 		}
+		err = s.notificationservice.SendNotification(ctx, notif)
+		if err != nil {
+			return err
+		}
+	case models.PartyInvite:
+
+	default:
+
 	}
 	return nil
 }
 
 func (s *socialService) RejectNotification(ctx context.Context, notif models.Notification) error {
-
+	err := s.notificationservice.DeleteNotification(ctx, notif.ID)
+	if err != nil {
+		return err
+	}
 	return nil
 }

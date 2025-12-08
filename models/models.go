@@ -23,14 +23,22 @@ type Match struct {
 	Players []Player `json:"players"`
 }
 
+type NotificationType string
+
+const (
+	FriendRequest     NotificationType = "FriendRequest"
+	PartyInvite       NotificationType = "PartyInvite"
+	BlockNotification NotificationType = "BlockNotification"
+)
+
 type Notification struct {
-	ID          string    `json:"id"`
-	SenderID    string    `json:"sender_id"`
-	RecipientID string    `json:"recipient_id"`
-	Type        string    `json:"type"`
-	Data        string    `json:"data"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID          string           `json:"id"`
+	SenderID    string           `json:"sender_id"`
+	RecipientID string           `json:"recipient_id"`
+	Type        NotificationType `json:"type"`
+	Data        string           `json:"data"`
+	Status      string           `json:"status"`
+	CreatedAt   time.Time        `json:"created_at"`
 }
 type BlockRequest struct {
 	BlockerID string `json:"blocker_id"`

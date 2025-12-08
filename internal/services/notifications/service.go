@@ -39,8 +39,8 @@ func (s *notificationsService) StartBackgroundListener(ctx context.Context) {
 				return
 			}
 
-			fmt.Printf("Sending to %s: %s\n", notif.RecipientID, notif.Data)
-			if err := s.hub.Send(notif.RecipientID, notif.Data); err != nil {
+			fmt.Printf("Sending to %s: %s\n", notif.RecipientID, notif)
+			if err := s.hub.Send(notif.RecipientID, notif); err != nil {
 				fmt.Println("Failed to send notification:", err)
 			}
 		})
@@ -60,7 +60,17 @@ func (s *notificationsService) RemoveConnection(userID string) {
 }
 
 func (s *notificationsService) SendNotification(ctx context.Context, notif models.Notification) error {
-	return s.store.Publish(ctx, "notifications", notif)
+
+	// need to check if a user is blocked before sending notification
+	err := s.notificationrepo.SendNotification(ctx, notif)
+	if err != nil {
+		return err
+	}
+	err = s.store.Publish(ctx, "notifications", notif)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *notificationsService) DeleteNotification(ctx context.Context, notifID string) error {

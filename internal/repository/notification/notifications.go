@@ -54,6 +54,7 @@ func (r *notificationsRepo) GetNotifications(ctx context.Context, uuid string) (
 	for rows.Next() {
 		var notification models.Notification
 		err := rows.Scan(
+			&notification.ID,
 			&notification.SenderID,
 			&notification.RecipientID,
 			&notification.Type,

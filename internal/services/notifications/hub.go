@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/websocket"
+	"github.com/nanagoboiler/models"
 )
 
 type Hub struct {
@@ -33,26 +34,36 @@ func (h *Hub) Remove(userID string) {
 	}
 }
 
-func (h *Hub) Send(userID string, message string) error {
+func (h *Hub) Send(userID string, notif models.Notification) error {
 	h.mu.RLock()
 	conn, ok := h.connections[userID]
 	h.mu.RUnlock()
 	if !ok {
 		return nil
 	}
-	return conn.WriteJSON(map[string]string{
-		"type": "notification",
-		"data": message,
+	return conn.WriteJSON(map[string]interface{}{
+		"type":         notif.Type,
+		"id":           notif.ID,
+		"sender_id":    notif.SenderID,
+		"recipient_id": notif.RecipientID,
+		"data":         notif.Data,
+		"status":       notif.Status,
+		"created_at":   notif.CreatedAt,
 	})
 }
 
-func (h *Hub) Broadcast(message string) {
+func (h *Hub) Broadcast(notif models.Notification) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for _, conn := range h.connections {
-		_ = conn.WriteJSON(map[string]string{
-			"type": "notification",
-			"data": message,
+		_ = conn.WriteJSON(map[string]interface{}{
+			"type":         notif.Type,
+			"id":           notif.ID,
+			"sender_id":    notif.SenderID,
+			"recipient_id": notif.RecipientID,
+			"data":         notif.Data,
+			"status":       notif.Status,
+			"created_at":   notif.CreatedAt,
 		})
 	}
 }
