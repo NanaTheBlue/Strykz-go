@@ -1,9 +1,11 @@
-package auth
+package middleware
 
 import (
 	"context"
 	"log"
 	"net/http"
+
+	"github.com/nanagoboiler/internal/services/auth"
 )
 
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -19,19 +21,19 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		err = validateCSRF(csrfToken.Value, csrfTokenHeader)
+		err = auth.ValidateCSRF(csrfToken.Value, csrfTokenHeader)
 		if err != nil {
 			http.Error(w, "Invalid Token", http.StatusUnauthorized)
 			return
 		}
 
-		user, err := validateJWT(sessionToken.Value)
+		user, err := auth.ValidateJWT(sessionToken.Value)
 		if err != nil {
 			http.Error(w, "Invalid Token", http.StatusUnauthorized)
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), UserContextKey, user)
+		ctx := context.WithValue(r.Context(), auth.UserContextKey, user)
 
 		log.Println(user.Username)
 

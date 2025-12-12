@@ -24,7 +24,7 @@ func validateHashedPassword(rawPassword string, hashedPassword string) error {
 
 }
 
-func validateCSRF(csrfCookie string, csrfHeader string) error {
+func ValidateCSRF(csrfCookie string, csrfHeader string) error {
 	if csrfCookie == "" || csrfHeader == "" {
 		return fmt.Errorf("csrf validation failed")
 	}
@@ -35,7 +35,7 @@ func validateCSRF(csrfCookie string, csrfHeader string) error {
 	return nil
 }
 
-func validateJWT(token string) (models.User, error) {
+func ValidateJWT(token string) (models.User, error) {
 	secret := os.Getenv("JWT_SECRET")
 
 	jwtToken, err := jwt.ParseWithClaims(token, &models.AuthClaims{}, func(token *jwt.Token) (interface{}, error) {
