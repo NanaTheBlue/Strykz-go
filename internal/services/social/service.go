@@ -21,7 +21,30 @@ func NewsocialService(notificationservice notifications.Service) Service {
 }
 
 func (s *socialService) SendFriendRequest(ctx context.Context, notif models.Notification) error {
-	err := s.notificationservice.SendNotification(ctx, notif)
+	userID, friendID := normalizePair(notif.SenderID, notif.RecipientID)
+
+	isblocked, err := s.socialrepo.IsBlocked(ctx, notif.SenderID, notif.RecipientID)
+	if err != nil {
+		return err
+	}
+	if isblocked {
+		return nil // should prob return a error
+	}
+
+	isfriends, err := s.socialrepo.IsFriends(ctx, userID, friendID)
+	if err != nil {
+		return err
+	}
+	if isfriends {
+		return nil // should prob return a error
+	}
+
+	err = s.socialrepo.CreateFriendRequest(ctx, userID, friendID)
+	if err != nil {
+		return err
+	}
+
+	err = s.notificationservice.SendNotification(ctx, notif)
 	if err != nil {
 		return err
 	}
@@ -37,7 +60,7 @@ func (s *socialService) BlockUser(ctx context.Context, req models.BlockRequest) 
 	if err != nil {
 		return err
 	}
-	if exists == true {
+	if exists {
 		return nil
 	}
 
@@ -70,7 +93,11 @@ func (s *socialService) AcceptNotification(ctx context.Context, notif models.Not
 
 	switch notif.Type {
 	case models.FriendRequest:
-		err := s.socialrepo.AddFriend(ctx, notif)
+		err := s.socialrepo.AddFriend(ctx, notif.SenderID, notif.RecipientID)
+		if err != nil {
+			return err
+		}
+		err = s.socialrepo.DeleteFriendRequest(ctx, notif.SenderID, notif.RecipientID)
 		if err != nil {
 			return err
 		}

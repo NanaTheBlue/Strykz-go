@@ -15,18 +15,11 @@ func NewSocialRepository(pool *pgxpool.Pool) SocialRepository {
 	return &socialRepo{pool: pool}
 }
 
-func (r *socialRepo) AddFriend(ctx context.Context, notif models.Notification) error {
-	a := notif.SenderID
-	b := notif.RecipientID
-
-	userID, friendID := a, b
-	if a > b {
-		userID, friendID = b, a
-	}
+func (r *socialRepo) AddFriend(ctx context.Context, userID string, friendID string) error {
 
 	_, err := r.pool.Exec(
 		ctx,
-		"INSERT INTO friends (user_id, friend_id) VALUES ($1, $2)",
+		"INSERT INTO friends (user_id, friend_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
 		userID,
 		friendID,
 	)
@@ -76,6 +69,24 @@ func (r *socialRepo) BlockUser(ctx context.Context, blockreq models.BlockRequest
 	return nil
 }
 
+func (r *socialRepo) CreateFriendRequest(ctx context.Context, senderID string, recipientID string) error {
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO friend_requests (sender_id, recipient_id) 
+         VALUES ($1, $2)
+         ON CONFLICT DO NOTHING`,
+		senderID,
+		recipientID,
+	)
+	return err
+}
+func (r *socialRepo) DeleteFriendRequest(ctx context.Context, senderID string, recipientID string) error {
+	_, err := r.pool.Exec(ctx, "DELETE FROM friend_requests WHERE sender_id = $1 AND recipient_id = $2", senderID, recipientID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *socialRepo) IsFriends(ctx context.Context, userID, user2ID string) (bool, error) {
 	var exists bool
 
@@ -84,7 +95,6 @@ func (r *socialRepo) IsFriends(ctx context.Context, userID, user2ID string) (boo
             SELECT 1
             FROM friends
             WHERE (user_id = $1 AND friend_id = $2)
-               OR (user_id = $2 AND friend_id = $1)
         );
     `, userID, user2ID).Scan(&exists)
 
