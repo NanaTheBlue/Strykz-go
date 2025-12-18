@@ -32,24 +32,13 @@ func (r *userRepo) Delete(ctx context.Context, user *models.User) error {
 	return nil
 }
 
-func (r *userRepo) Check(ctx context.Context, user *models.User) error {
-	var id string
-	err := r.pool.QueryRow(ctx, "SELECT * from users WHERE refresh_token = $1", user.ID).Scan(&id)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (r *userRepo) GetUserByRefresh(ctx context.Context, refreshToken string) (*models.User, error) {
 	var user models.User
 
-	err := r.pool.QueryRow(ctx, "SELECT id from users WHERE Id = $1", refreshToken).Scan(&user)
+	err := r.pool.QueryRow(ctx, "SELECT id,username,email from users WHERE refresh_token = $1", refreshToken).Scan(&user.ID, &user.Username, &user.Email)
 
 	if err != nil {
-		return &models.User{}, err
+		return nil, err
 	}
 
 	return &user, nil
@@ -58,9 +47,9 @@ func (r *userRepo) GetUserByRefresh(ctx context.Context, refreshToken string) (*
 
 func (r *userRepo) GrabUser(ctx context.Context, req *models.LoginRequest) (*models.User, error) {
 	var user models.User
-	err := r.pool.QueryRow(ctx, "SELECT id,username,email,password_hash from users WHERE email = $1", user.Email).Scan(&user)
+	err := r.pool.QueryRow(ctx, "SELECT id,username,email,password_hash from users WHERE email = $1", req.Email).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash)
 	if err != nil {
-		return &models.User{}, err
+		return nil, err
 	}
 	return &user, nil
 }
