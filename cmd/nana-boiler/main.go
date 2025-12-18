@@ -1,12 +1,9 @@
 package main
 
 import (
-	"log/slog"
 	"net/http"
-	"os"
 
 	authapi "github.com/nanagoboiler/internal/api/auth"
-	"github.com/nanagoboiler/internal/api/middleware"
 	notificationsapi "github.com/nanagoboiler/internal/api/notifications"
 	matchmakingapi "github.com/nanagoboiler/internal/api/que"
 	"github.com/nanagoboiler/internal/services/matchmaking"
@@ -46,10 +43,10 @@ func main() {
 	notificationService := notifications.NewnotificationsService(hub, redisRepo, notificationRepo)
 
 	//logger
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	//logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	//middleware
-	LoggingMiddleware := middleware.LoggingMiddleware(logger)
+	//LoggingMiddleware := middleware.LoggingMiddleware(logger)
 
 	// Auth Handlers
 	authRegister := authapi.Register(authService)

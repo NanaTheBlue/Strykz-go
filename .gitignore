@@ -1,3 +1,4 @@
 .env
 
 kubeconfig.yaml
+docker-compose.yml
