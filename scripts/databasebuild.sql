@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS users(
 
 
 
+
 CREATE TABLE IF NOT EXISTS notifications(
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),  
     sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -22,6 +23,19 @@ CREATE TABLE IF NOT EXISTS notifications(
     notification_type TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CHECK (sender_id <> addressee_id)
+);
+
+CREATE TABLE parties (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    leader_id UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE party_members (
+    party_id UUID NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+    user_id UUID  UNIQUE NOT NULL REFERENCES users(id),
+    joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (party_id, user_id)
 );
 
 
@@ -52,6 +66,31 @@ CREATE TABLE IF NOT EXISTS blocks (
     PRIMARY KEY (blocker_id, blocked_id),
     CHECK (blocker_id <> blocked_id)
 );
+
+CREATE OR REPLACE FUNCTION check_party_size()
+RETURNS TRIGGER AS $$
+DECLARE
+    member_count INT;
+BEGIN
+ 
+    PERFORM 1 FROM parties WHERE id = NEW.party_id FOR UPDATE;
+
+    
+    SELECT COUNT(*) INTO member_count
+    FROM party_members
+    WHERE party_id = NEW.party_id;
+
+    IF member_count >= 5 THEN
+        RAISE EXCEPTION 'Party can have at most 5 members';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER party_size_check
+BEFORE INSERT ON party_members
+FOR EACH ROW EXECUTE FUNCTION check_party_size();
 
 
 
