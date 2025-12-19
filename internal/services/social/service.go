@@ -39,6 +39,7 @@ func (s *socialService) SendFriendRequest(ctx context.Context, notif models.Noti
 		return nil // should prob return a error
 	}
 
+	//todo make this more atomic
 	err = s.socialrepo.CreateFriendRequest(ctx, userID, friendID)
 	if err != nil {
 		return err

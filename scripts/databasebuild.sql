@@ -25,13 +25,13 @@ CREATE TABLE IF NOT EXISTS notifications(
     CHECK (sender_id <> addressee_id)
 );
 
-CREATE TABLE parties (
+CREATE TABLE IF NOT EXISTS parties (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     leader_id UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE party_members (
+CREATE TABLE IF NOT EXISTS party_members (
     party_id UUID NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
     user_id UUID  UNIQUE NOT NULL REFERENCES users(id),
     joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

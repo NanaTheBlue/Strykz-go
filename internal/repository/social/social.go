@@ -3,6 +3,7 @@ package socialrepo
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nanagoboiler/models"
 )
@@ -79,6 +80,32 @@ func (r *socialRepo) CreateFriendRequest(ctx context.Context, senderID string, r
 	)
 	return err
 }
+
+func (r *socialRepo) CreateParty(ctx context.Context, leaderID string) error {
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var partyID string
+	err = tx.QueryRow(ctx, `
+        INSERT INTO parties (leader_id) VALUES ($1) RETURNING id
+    `, leaderID).Scan(&partyID)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, `
+        INSERT INTO party_members (party_id, user_id) VALUES ($1, $2)
+    `, partyID, leaderID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
 func (r *socialRepo) DeleteFriendRequest(ctx context.Context, senderID string, recipientID string) error {
 	_, err := r.pool.Exec(ctx, "DELETE FROM friend_requests WHERE sender_id = $1 AND recipient_id = $2", senderID, recipientID)
 	if err != nil {
