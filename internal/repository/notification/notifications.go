@@ -18,7 +18,7 @@ func NewNotificationsRepository(pool *pgxpool.Pool) NotificationRepository {
 
 func (r *notificationsRepo) GetNotification(ctx context.Context, notificationID string) (models.Notification, error) {
 	var notification models.Notification
-	err := r.pool.QueryRow(ctx, "SELECT FROM notifications WHERE id =$1 ", notificationID).Scan(&notification.SenderID,
+	err := r.pool.QueryRow(ctx, "SELECT sender_id, addressee_id, notification_type, data, created_at FROM notifications WHERE id =$1 ", notificationID).Scan(&notification.SenderID,
 		&notification.RecipientID,
 		&notification.Type,
 		&notification.Data,

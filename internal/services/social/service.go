@@ -23,24 +23,7 @@ func NewsocialService(notificationservice notifications.Service) Service {
 func (s *socialService) SendFriendRequest(ctx context.Context, notif models.Notification) error {
 	userID, friendID := normalizePair(notif.SenderID, notif.RecipientID)
 
-	isblocked, err := s.socialrepo.IsBlocked(ctx, notif.SenderID, notif.RecipientID)
-	if err != nil {
-		return err
-	}
-	if isblocked {
-		return nil // should prob return a error
-	}
-
-	isfriends, err := s.socialrepo.IsFriends(ctx, userID, friendID)
-	if err != nil {
-		return err
-	}
-	if isfriends {
-		return nil // should prob return a error
-	}
-
-	//todo make this more atomic
-	err = s.socialrepo.CreateFriendRequest(ctx, userID, friendID)
+	err := s.socialrepo.CreateFriendRequest(ctx, userID, friendID)
 	if err != nil {
 		return err
 	}
@@ -54,6 +37,9 @@ func (s *socialService) SendFriendRequest(ctx context.Context, notif models.Noti
 }
 
 func (s *socialService) BlockUser(ctx context.Context, req models.BlockRequest) error {
+
+	//make this a transaction
+
 	if req.BlockerID == req.BlockedID {
 		return errors.New("cannot block yourself")
 	}

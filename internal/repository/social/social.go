@@ -2,6 +2,7 @@ package socialrepo
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -43,23 +44,6 @@ func (r *socialRepo) RemoveFriend(ctx context.Context, userID string, friendID s
 	return nil
 }
 
-func (r *socialRepo) IsBlocked(ctx context.Context, userID string, blockedID string) (bool, error) {
-	var exists bool
-	err := r.pool.QueryRow(ctx, `
-        SELECT EXISTS (
-            SELECT 1
-            FROM blocks
-            WHERE blocker_id = $1 AND blocked_id = $2
-        );
-    `, userID, blockedID).Scan(&exists)
-
-	if err != nil {
-		return false, err
-	}
-	return exists, nil
-
-}
-
 func (r *socialRepo) BlockUser(ctx context.Context, blockreq models.BlockRequest) error {
 	_, err := r.pool.Exec(ctx, "INSERT INTO blocks (blocker_id, blocked_id) VALUES ($1, $2)",
 		blockreq.BlockerID, blockreq.BlockedID,
@@ -71,14 +55,50 @@ func (r *socialRepo) BlockUser(ctx context.Context, blockreq models.BlockRequest
 }
 
 func (r *socialRepo) CreateFriendRequest(ctx context.Context, senderID string, recipientID string) error {
-	_, err := r.pool.Exec(ctx,
-		`INSERT INTO friend_requests (sender_id, recipient_id) 
-         VALUES ($1, $2)
-         ON CONFLICT DO NOTHING`,
-		senderID,
-		recipientID,
-	)
-	return err
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var blocked bool
+	err = tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM blocks
+			WHERE blocker_id = $1 AND blocked_id = $2
+		)
+	`, senderID, recipientID).Scan(&blocked)
+	if err != nil {
+		return err
+	}
+	if blocked {
+		return errors.New("user is blocked")
+	}
+
+	var friends bool
+	err = tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM friends
+			WHERE user_id = $1 AND friend_id = $2
+		)
+	`, senderID, recipientID).Scan(&friends)
+	if err != nil {
+		return err
+	}
+	if friends {
+		return errors.New("already friends")
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO friend_requests (sender_id, recipient_id)
+		VALUES ($1, $2)
+		ON CONFLICT DO NOTHING
+	`, senderID, recipientID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *socialRepo) CreateParty(ctx context.Context, leaderID string) error {
@@ -112,22 +132,4 @@ func (r *socialRepo) DeleteFriendRequest(ctx context.Context, senderID string, r
 		return err
 	}
 	return nil
-}
-
-func (r *socialRepo) IsFriends(ctx context.Context, userID, user2ID string) (bool, error) {
-	var exists bool
-
-	err := r.pool.QueryRow(ctx, `
-        SELECT EXISTS (
-            SELECT 1
-            FROM friends
-            WHERE (user_id = $1 AND friend_id = $2)
-        );
-    `, userID, user2ID).Scan(&exists)
-
-	if err != nil {
-		return false, err
-	}
-
-	return exists, nil
 }
