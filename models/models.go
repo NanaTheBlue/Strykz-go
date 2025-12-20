@@ -40,6 +40,11 @@ type Notification struct {
 	Status      string           `json:"status"`
 	CreatedAt   time.Time        `json:"created_at"`
 }
+type FriendRequestInput struct {
+	SenderID    string
+	RecipientID string
+}
+
 type BlockRequest struct {
 	BlockerID string `json:"blocker_id"`
 	BlockedID string `json:"blocked_id"`

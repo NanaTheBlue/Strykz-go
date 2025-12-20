@@ -61,7 +61,7 @@ func (s *notificationsService) RemoveConnection(userID string) {
 
 func (s *notificationsService) SendNotification(ctx context.Context, notif models.Notification) error {
 
-	// need to check if a user is blocked before sending notification
+	// make sure its not a party invite or a friend request if it is still send it to redis
 	err := s.notificationrepo.SendNotification(ctx, notif)
 	if err != nil {
 		return err

@@ -20,38 +20,31 @@ func NewsocialService(notificationservice notifications.Service) Service {
 	}
 }
 
-func (s *socialService) SendFriendRequest(ctx context.Context, notif models.Notification) error {
-	userID, friendID := normalizePair(notif.SenderID, notif.RecipientID)
+func (s *socialService) SendFriendRequest(ctx context.Context, friendreq models.FriendRequestInput) error {
 
-	err := s.socialrepo.CreateFriendRequest(ctx, userID, friendID)
+	err := s.socialrepo.CreateFriendRequest(ctx, friendreq)
 	if err != nil {
 		return err
 	}
 
-	err = s.notificationservice.SendNotification(ctx, notif)
-	if err != nil {
-		return err
-	}
+	//Todo create a notification
+	/*
+		err = s.notificationservice.SendNotification(ctx, notif)
+		if err != nil {
+			return err
+		}
+	*/
 
 	return nil
 }
 
 func (s *socialService) BlockUser(ctx context.Context, req models.BlockRequest) error {
 
-	//make this a transaction
-
 	if req.BlockerID == req.BlockedID {
 		return errors.New("cannot block yourself")
 	}
-	exists, err := s.socialrepo.IsBlocked(ctx, req.BlockerID, req.BlockedID)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return nil
-	}
 
-	err = s.socialrepo.BlockUser(ctx, req)
+	err := s.socialrepo.BlockUser(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -67,12 +60,6 @@ func (s *socialService) BlockUser(ctx context.Context, req models.BlockRequest) 
 	if err != nil {
 		return err
 	}
-
-	err = s.socialrepo.RemoveFriend(ctx, req.BlockerID, req.BlockedID)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/nanagoboiler/models"
 )
 
@@ -29,15 +30,10 @@ func (r *socialRepo) AddFriend(ctx context.Context, userID string, friendID stri
 }
 
 func (r *socialRepo) RemoveFriend(ctx context.Context, userID string, friendID string) error {
-	a := userID
-	b := friendID
 
-	user, friend := a, b
-	if a > b {
-		user, friend = b, a
-	}
+	a, b := normalizePair(userID, friendID)
 
-	_, err := r.pool.Exec(ctx, "DELETE FROM friends Where user_id = $1 AND friend_id = $2", user, friend)
+	_, err := r.pool.Exec(ctx, "DELETE FROM friends Where user_id = $1 AND friend_id = $2", a, b)
 	if err != nil {
 		return err
 	}
@@ -45,57 +41,64 @@ func (r *socialRepo) RemoveFriend(ctx context.Context, userID string, friendID s
 }
 
 func (r *socialRepo) BlockUser(ctx context.Context, blockreq models.BlockRequest) error {
-	_, err := r.pool.Exec(ctx, "INSERT INTO blocks (blocker_id, blocked_id) VALUES ($1, $2)",
-		blockreq.BlockerID, blockreq.BlockedID,
-	)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *socialRepo) CreateFriendRequest(ctx context.Context, senderID string, recipientID string) error {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
-
-	var blocked bool
-	err = tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM blocks
-			WHERE blocker_id = $1 AND blocked_id = $2
-		)
-	`, senderID, recipientID).Scan(&blocked)
-	if err != nil {
-		return err
-	}
-	if blocked {
-		return errors.New("user is blocked")
-	}
-
-	var friends bool
-	err = tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM friends
-			WHERE user_id = $1 AND friend_id = $2
-		)
-	`, senderID, recipientID).Scan(&friends)
-	if err != nil {
-		return err
-	}
-	if friends {
-		return errors.New("already friends")
-	}
-
-	_, err = tx.Exec(ctx, `
-		INSERT INTO friend_requests (sender_id, recipient_id)
+	cmd, err := tx.Exec(ctx, `
+		INSERT INTO blocks (blocker_id, blocked_id)
 		VALUES ($1, $2)
 		ON CONFLICT DO NOTHING
-	`, senderID, recipientID)
+	`, blockreq.BlockerID, blockreq.BlockedID)
 	if err != nil {
 		return err
+	}
+
+	if cmd.RowsAffected() == 0 {
+		return errors.New("user is already blocked")
+	}
+
+	a, b := normalizePair(blockreq.BlockerID, blockreq.BlockedID)
+
+	_, err = tx.Exec(ctx, `
+		DELETE FROM friends
+		WHERE user_id = $1 AND friend_id = $2
+	`, a, b)
+	if err != nil {
+		return err
+	}
+
+	// should delete friend requests aswell if any exist
+	return tx.Commit(ctx)
+}
+
+func (r *socialRepo) CreateFriendRequest(ctx context.Context, friendreq models.FriendRequestInput) error {
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	a, b := normalizePair(friendreq.SenderID, friendreq.RecipientID)
+	cmd, err := tx.Exec(ctx, `
+		INSERT INTO friend_requests (sender_id, recipient_id)
+		SELECT $1, $2
+		WHERE NOT EXISTS (
+    	SELECT 1 FROM friends WHERE user_id = $3 AND friend_id = $4
+		)
+		AND NOT EXISTS (
+    	SELECT 1 FROM blocks WHERE blocker_id = $1 AND blocked_id = $2
+		)
+		AND NOT EXISTS (
+    	SELECT 1 FROM blocks WHERE blocker_id = $2 AND blocked_id = $1
+);
+		
+	`, friendreq.SenderID, friendreq.RecipientID, a, b)
+	if err != nil {
+		return err
+	}
+	if cmd.RowsAffected() == 0 {
+		return errors.New("friend request cannot be created: already friends or blocked")
 	}
 
 	return tx.Commit(ctx)
