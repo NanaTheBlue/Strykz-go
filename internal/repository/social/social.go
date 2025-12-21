@@ -68,8 +68,14 @@ func (r *socialRepo) BlockUser(ctx context.Context, blockreq models.BlockRequest
 	if err != nil {
 		return err
 	}
+	_, err = tx.Exec(ctx, `
+		DELETE FROM friend_requests
+		WHERE (sender_id = $1 AND recipient_id = $2)
+   		OR (sender_id = $2 AND recipient_id = $1);`, a, b)
+	if err != nil {
+		return err
+	}
 
-	// should delete friend requests aswell if any exist
 	return tx.Commit(ctx)
 }
 
@@ -91,12 +97,19 @@ func (r *socialRepo) CreateFriendRequest(ctx context.Context, friendreq models.F
 		)
 		AND NOT EXISTS (
     	SELECT 1 FROM blocks WHERE blocker_id = $2 AND blocked_id = $1
+						)
+        AND NOT EXISTS (
+   		SELECT 1
+    	FROM friend_requests
+    	WHERE (sender_id = $1 AND recipient_id = $2)
+       	OR (sender_id = $2 AND recipient_id = $1)
 );
 		
 	`, friendreq.SenderID, friendreq.RecipientID, a, b)
 	if err != nil {
 		return err
 	}
+	// Todo: better error handling
 	if cmd.RowsAffected() == 0 {
 		return errors.New("friend request cannot be created: already friends or blocked")
 	}
