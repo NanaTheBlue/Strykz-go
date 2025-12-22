@@ -27,13 +27,18 @@ func (s *socialService) SendFriendRequest(ctx context.Context, friendreq models.
 		return err
 	}
 
-	//Todo create a notification
-	/*
-		err = s.notificationservice.SendNotification(ctx, notif)
-		if err != nil {
-			return err
-		}
-	*/
+	notif := models.Notification{
+		SenderID:    friendreq.SenderID,
+		RecipientID: friendreq.RecipientID,
+		Type:        models.FriendRequest,
+		Data:        "",
+		Status:      "Pending",
+	}
+
+	err = s.notificationservice.PublishNotification(ctx, notif)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -49,22 +54,12 @@ func (s *socialService) BlockUser(ctx context.Context, req models.BlockRequest) 
 		return err
 	}
 
-	notif := models.Notification{
-		SenderID:    req.BlockerID,
-		RecipientID: req.BlockedID,
-		Type:        models.BlockNotification,
-		Data:        "",
-		Status:      "UnRead", // will make this a type later
-	}
-	err = s.notificationservice.SendNotification(ctx, notif)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
 func (s *socialService) AcceptNotification(ctx context.Context, notif models.Notification) error {
 
+	//Todo: Wrap this in a transaction
 	switch notif.Type {
 	case models.FriendRequest:
 		err := s.socialrepo.AddFriend(ctx, notif.SenderID, notif.RecipientID)
@@ -75,7 +70,7 @@ func (s *socialService) AcceptNotification(ctx context.Context, notif models.Not
 		if err != nil {
 			return err
 		}
-		err = s.notificationservice.SendNotification(ctx, notif)
+		err = s.notificationservice.CreateAndPublishNotification(ctx, notif)
 		if err != nil {
 			return err
 		}

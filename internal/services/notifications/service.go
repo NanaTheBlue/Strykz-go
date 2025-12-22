@@ -59,14 +59,20 @@ func (s *notificationsService) RemoveConnection(userID string) {
 	s.hub.Remove(userID)
 }
 
-func (s *notificationsService) SendNotification(ctx context.Context, notif models.Notification) error {
-
-	// make sure its not a party invite or a friend request if it is still send it to redis
+func (s *notificationsService) CreateAndPublishNotification(ctx context.Context, notif models.Notification) error {
 	err := s.notificationrepo.SendNotification(ctx, notif)
 	if err != nil {
 		return err
 	}
 	err = s.store.Publish(ctx, "notifications", notif)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (s *notificationsService) PublishNotification(ctx context.Context, notif models.Notification) error {
+
+	err := s.store.Publish(ctx, "notifications", notif)
 	if err != nil {
 		return err
 	}
