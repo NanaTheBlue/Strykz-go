@@ -19,14 +19,45 @@ func NewSocialRepository(pool *pgxpool.Pool) SocialRepository {
 }
 
 func (r *socialRepo) AddFriend(ctx context.Context, userID string, friendID string) error {
+	// check if theres a friend request if not return
 
-	_, err := r.pool.Exec(
-		ctx,
-		"INSERT INTO friends (user_id, friend_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-		userID,
-		friendID,
-	)
-	return err
+	// insert user into friends table
+
+	// delete friend request
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	a, b := normalizePair(userID, friendID)
+	defer tx.Rollback(ctx)
+	cmd, err := tx.Exec(ctx, `
+		INSERT INTO friends (user_id, friend_id)
+		SELECT $1, $2
+		WHERE EXISTS (
+			SELECT 1
+			FROM friend_requests
+			WHERE sender_id = $3
+			  AND recipient_id = $4
+		)
+		ON CONFLICT DO NOTHING
+	`, a, b, friendID, userID)
+	if err != nil {
+		return err
+	}
+	if cmd.RowsAffected() == 0 {
+		return errors.New("no pending friend request")
+	}
+
+	_, err = tx.Exec(ctx, `
+		DELETE FROM friend_requests
+		WHERE sender_id = $1
+		  AND recipient_id = $2
+	`, friendID, userID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *socialRepo) RemoveFriend(ctx context.Context, userID string, friendID string) error {
