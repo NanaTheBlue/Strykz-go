@@ -14,9 +14,10 @@ type socialService struct {
 	socialrepo          socialrepo.SocialRepository
 }
 
-func NewsocialService(notificationservice notifications.Service) Service {
+func NewsocialService(notificationservice notifications.Service, socialrepo socialrepo.SocialRepository) Service {
 	return &socialService{
 		notificationservice: notificationservice,
+		socialrepo:          socialrepo,
 	}
 }
 

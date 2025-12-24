@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"os"
 
 	authapi "github.com/nanagoboiler/internal/api/auth"
 	notificationsapi "github.com/nanagoboiler/internal/api/notifications"
@@ -22,7 +23,9 @@ import (
 func main() {
 	router := http.NewServeMux()
 	ctx := context.Background()
-	pool, err := bootstrap.NewPostgresPool(ctx)
+	postgresURL := os.Getenv("POSTGRES_URL")
+
+	pool, err := bootstrap.NewPostgresPool(ctx, postgresURL)
 	if err != nil {
 		panic(err)
 	}

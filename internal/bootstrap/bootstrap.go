@@ -5,18 +5,12 @@ import (
 
 	"fmt"
 
-	"os"
-
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	_ "github.com/joho/godotenv/autoload"
 )
 
-func NewPostgresPool(ctx context.Context) (*pgxpool.Pool, error) {
-
-	postgresURL := os.Getenv("POSTGRES_URL")
-
-	println(postgresURL)
+func NewPostgresPool(ctx context.Context, postgresURL string) (*pgxpool.Pool, error) {
 
 	pool, err := pgxpool.New(ctx, postgresURL)
 	if err != nil {
