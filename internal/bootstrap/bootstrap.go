@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/redis/go-redis/v9"
 )
 
 func ensureDatabase(ctx context.Context, pool *pgxpool.Pool) error {
@@ -50,6 +51,19 @@ func NewPostgresPool(ctx context.Context, postgresURL string) (*pgxpool.Pool, er
 
 }
 
-func newRedisInstance() {
+func NewRedisInstance(ctx context.Context, address string, password string) (*redis.Client, error) {
+
+	client := redis.NewClient(&redis.Options{
+		Addr:     address,
+		Password: password,
+		DB:       0, // Use default DB
+		Protocol: 2, // Connection protocol
+	})
+	//ping the redis client to ensure it works properly
+	if err := client.Ping(ctx).Err(); err != nil {
+		return nil, err
+	}
+
+	return client, nil
 
 }

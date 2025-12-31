@@ -30,4 +30,6 @@ func setupService(pool *pgxpool.Pool) (*socialService, notifications.Service) {
 }
 func TestSendFriendRequest_Integration(t *testing.T) {
 
+	socialService, notifService := setupService()
+
 }

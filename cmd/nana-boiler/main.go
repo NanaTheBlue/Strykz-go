@@ -24,13 +24,17 @@ func main() {
 	router := http.NewServeMux()
 	ctx := context.Background()
 	postgresURL := os.Getenv("POSTGRES_URL")
+	address := os.Getenv("REDIS_ADDRESS")
+	password := os.Getenv("REDIS_PASSWORD")
 
 	pool, err := bootstrap.NewPostgresPool(ctx, postgresURL)
 	if err != nil {
 		panic(err)
 	}
-	redisClient := redis.InitRedis()
-
+	redisClient, err := bootstrap.NewRedisInstance(ctx, address, password)
+	if err != nil {
+		panic(err)
+	}
 	// Repositories
 	authRepo := authrepo.NewUserRepository(pool)
 	tokenRepo := authrepo.NewTokensRepository(pool)

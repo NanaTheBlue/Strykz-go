@@ -10,9 +10,11 @@ import (
 
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		sessionToken, err := r.Cookie("auth_token")
 
 		csrfToken, errr := r.Cookie("csrf_token")
+
 		csrfTokenHeader := r.Header.Get("X-CSRF-TOKEN")
 
 		if err != nil || errr != nil {
