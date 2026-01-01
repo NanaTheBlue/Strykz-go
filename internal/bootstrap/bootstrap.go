@@ -15,7 +15,7 @@ import (
 
 func ensureDatabase(ctx context.Context, pool *pgxpool.Pool) error {
 
-	scriptPath := filepath.Join("..", "scripts", "databasebuild.sql")
+	scriptPath := filepath.Join(".", "scripts", "databasebuild.sql")
 
 	sqlBytes, err := os.ReadFile(scriptPath)
 	if err != nil {

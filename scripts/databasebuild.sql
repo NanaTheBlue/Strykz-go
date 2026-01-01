@@ -88,6 +88,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS party_size_check ON party_members;
+
 CREATE TRIGGER party_size_check
 BEFORE INSERT ON party_members
 FOR EACH ROW EXECUTE FUNCTION check_party_size();
