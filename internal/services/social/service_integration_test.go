@@ -80,21 +80,32 @@ func setupService(pool *pgxpool.Pool, redisClient *redis.Client) (*socialService
 
 func createTestUser(t *testing.T, pool *pgxpool.Pool, username string) string {
 	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 
 	var userID string
-	err := pool.QueryRow(context.Background(),
+	err := pool.QueryRow(ctx,
 		`INSERT INTO users (username, email,hashed_password)
-		 VALUES ($1, $2,$3)
+		 VALUES ($1,$2,$3)
 		 RETURNING id`,
 		username,
 		username+"@test.com", "TEST",
 	).Scan(&userID)
 
 	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		_, _ = pool.Exec(
+			ctx,
+			`DELETE FROM users WHERE id=$1`,
+			userID,
+		)
+	})
 	return userID
 }
 func TestSendFriendRequest_Integration(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 	service, _ := setupService(testPool, testRedis)
 
 	user1 := createTestUser(t, testPool, "user1")
@@ -107,7 +118,7 @@ func TestSendFriendRequest_Integration(t *testing.T) {
 	ch := sub.Channel()
 
 	err = service.SendFriendRequest(
-		context.Background(),
+		ctx,
 		models.FriendRequestInput{
 			SenderID:    user1,
 			RecipientID: user2,
@@ -116,13 +127,15 @@ func TestSendFriendRequest_Integration(t *testing.T) {
 	require.NoError(t, err)
 	var exists bool
 	err = testPool.QueryRow(
-		context.Background(),
+		ctx,
 		`SELECT EXISTS (
 			SELECT 1 FROM friend_requests
 			WHERE sender_id=$1 AND receiver_id=$2
 		)`,
 		user1, user2,
 	).Scan(&exists)
+	require.NoError(t, err)
+	require.True(t, exists)
 
 	select {
 	case msg := <-ch:
@@ -130,4 +143,76 @@ func TestSendFriendRequest_Integration(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("did not receive Redis notification")
 	}
+}
+
+func TestBlockUser_Integration(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	s, _ := setupService(testPool, testRedis)
+
+	user1 := createTestUser(t, testPool, "user1")
+	user2 := createTestUser(t, testPool, "user2")
+	err := s.BlockUser(ctx, models.BlockRequest{
+		BlockerID: user1,
+		BlockedID: user1,
+	})
+	require.Error(t, err)
+
+	err = s.BlockUser(ctx, models.BlockRequest{
+		BlockerID: user1,
+		BlockedID: user2,
+	})
+	require.NoError(t, err)
+
+	var exists bool
+
+	err = testPool.QueryRow(
+		ctx, `SELECT EXISTS (
+				SELECT 1 FROM blocks
+				WHERE blocker_id =$1 AND blocked_id =$2 )`,
+		user1, user2,
+	).Scan(&exists)
+	require.NoError(t, err)
+	require.True(t, exists)
+
+}
+
+func TestRejectNotification_Integration(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_, s := setupService(testPool, testRedis)
+	user1 := createTestUser(t, testPool, "user1")
+	user2 := createTestUser(t, testPool, "user2")
+
+	notifID, err := s.CreateNoPublishNotification(ctx, models.Notification{
+		SenderID:    user1,
+		RecipientID: user2,
+		Type:        "Test",
+		Status:      "Pending",
+	})
+
+	require.NoError(t, err)
+
+	var exists bool
+
+	err = testPool.QueryRow(
+		ctx, `SELECT EXISTS (
+				SELECT 1 FROM notifications
+				WHERE id =$1 )`, notifID,
+	).Scan(&exists)
+	require.NoError(t, err)
+	require.True(t, exists)
+
+	err = s.DeleteNotification(ctx, notifID)
+	require.NoError(t, err)
+
+	var exist bool
+	err = testPool.QueryRow(
+		ctx, `SELECT EXISTS (
+				SELECT 1 FROM notifications
+				WHERE id =$1 )`, notifID,
+	).Scan(&exist)
+	require.NoError(t, err)
+	require.False(t, exist)
+
 }

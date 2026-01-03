@@ -12,6 +12,7 @@ type Service interface {
 	AddConnection(userID string, conn *websocket.Conn)
 	RemoveConnection(userID string)
 	CreateAndPublishNotification(ctx context.Context, notif models.Notification) error
+	CreateNoPublishNotification(ctx context.Context, notif models.Notification) (string, error)
 	PublishNotification(ctx context.Context, notif models.Notification) error
 	GetNotifications(ctx context.Context, userID string) ([]models.Notification, error)
 	DeleteNotification(ctx context.Context, notifID string) error

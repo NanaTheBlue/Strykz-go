@@ -29,6 +29,7 @@ const (
 	FriendRequest     NotificationType = "FriendRequest"
 	PartyInvite       NotificationType = "PartyInvite"
 	BlockNotification NotificationType = "BlockNotification"
+	TestNotification  NotificationType = "Test"
 )
 
 type Notification struct {

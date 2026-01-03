@@ -29,17 +29,19 @@ func (r *notificationsRepo) GetNotification(ctx context.Context, notificationID 
 
 	return notification, nil
 }
-func (r *notificationsRepo) SendNotification(ctx context.Context, notif models.Notification) error {
+func (r *notificationsRepo) SendNotification(ctx context.Context, notif models.Notification) (string, error) {
+	var id string
 
-	_, err := r.pool.Exec(ctx,
+	err := r.pool.QueryRow(ctx,
 		`INSERT INTO notifications (sender_id, addressee_id, notification_status, notification_type)
-     VALUES ($1, $2, $3, $4)`,
+     VALUES ($1, $2, $3, $4)
+	 RETURNING ID`,
 		notif.SenderID, notif.RecipientID, notif.Status, notif.Type,
-	)
+	).Scan(&id)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return id, nil
 }
 
 func (r *notificationsRepo) GetNotifications(ctx context.Context, uuid string) ([]models.Notification, error) {

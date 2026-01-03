@@ -60,7 +60,7 @@ func (s *notificationsService) RemoveConnection(userID string) {
 }
 
 func (s *notificationsService) CreateAndPublishNotification(ctx context.Context, notif models.Notification) error {
-	err := s.notificationrepo.SendNotification(ctx, notif)
+	_, err := s.notificationrepo.SendNotification(ctx, notif)
 	if err != nil {
 		return err
 	}
@@ -69,6 +69,14 @@ func (s *notificationsService) CreateAndPublishNotification(ctx context.Context,
 		return err
 	}
 	return nil
+}
+
+func (s *notificationsService) CreateNoPublishNotification(ctx context.Context, notif models.Notification) (string, error) {
+	id, err := s.notificationrepo.SendNotification(ctx, notif)
+	if err != nil {
+		return "", err
+	}
+	return id, nil
 }
 func (s *notificationsService) PublishNotification(ctx context.Context, notif models.Notification) error {
 
