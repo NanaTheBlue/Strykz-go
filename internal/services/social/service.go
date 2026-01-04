@@ -60,14 +60,9 @@ func (s *socialService) BlockUser(ctx context.Context, req models.BlockRequest) 
 
 func (s *socialService) AcceptNotification(ctx context.Context, notif models.Notification) error {
 
-	//Todo: Wrap this in a transaction
 	switch notif.Type {
 	case models.FriendRequest:
 		err := s.socialrepo.AddFriend(ctx, notif.SenderID, notif.RecipientID)
-		if err != nil {
-			return err
-		}
-		err = s.socialrepo.DeleteFriendRequest(ctx, notif.SenderID, notif.RecipientID)
 		if err != nil {
 			return err
 		}
@@ -88,5 +83,19 @@ func (s *socialService) RejectNotification(ctx context.Context, notif models.Not
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (s *socialService) CreateParty(ctx context.Context, userID string) (string, error) {
+	partyID, err := s.CreateParty(ctx, userID)
+	if err != nil {
+		return "", err
+	}
+
+	return partyID, nil
+}
+
+func (s *socialService) PartyInvite(ctx context.Context, partyInviteReq models.PartyInviteRequest) error {
+
 	return nil
 }

@@ -51,6 +51,12 @@ type BlockRequest struct {
 	BlockedID string `json:"blocked_id"`
 }
 
+type PartyInviteRequest struct {
+	PartyID     string `json:"party_id"`
+	SenderID    string `json:"sender_id"`
+	RecipientID string `json:"recipient_id"`
+	MemberCount string `json:"member_count"`
+}
 type RegisterRequest struct {
 	Username        string `json:"username"`
 	Email           string `json:"email"`

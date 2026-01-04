@@ -80,8 +80,8 @@ BEGIN
     FROM party_members
     WHERE party_id = NEW.party_id;
 
-    IF member_count >= 5 THEN
-        RAISE EXCEPTION 'Party can have at most 5 members';
+    IF member_count >= 4 THEN
+        RAISE EXCEPTION 'Party can have at most 5 players';
     END IF;
 
     RETURN NEW;

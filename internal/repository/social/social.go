@@ -148,10 +148,10 @@ func (r *socialRepo) CreateFriendRequest(ctx context.Context, friendreq models.F
 	return tx.Commit(ctx)
 }
 
-func (r *socialRepo) CreateParty(ctx context.Context, leaderID string) error {
+func (r *socialRepo) CreateParty(ctx context.Context, leaderID string) (string, error) {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer tx.Rollback(ctx)
 
@@ -160,17 +160,10 @@ func (r *socialRepo) CreateParty(ctx context.Context, leaderID string) error {
         INSERT INTO parties (leader_id) VALUES ($1) RETURNING id
     `, leaderID).Scan(&partyID)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	_, err = tx.Exec(ctx, `
-        INSERT INTO party_members (party_id, user_id) VALUES ($1, $2)
-    `, partyID, leaderID)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
+	return partyID, tx.Commit(ctx)
 }
 
 func (r *socialRepo) DeleteFriendRequest(ctx context.Context, senderID string, recipientID string) error {

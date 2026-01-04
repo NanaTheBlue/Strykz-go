@@ -12,4 +12,5 @@ type SocialRepository interface {
 	BlockUser(ctx context.Context, blockreq models.BlockRequest) error
 	CreateFriendRequest(ctx context.Context, friendreq models.FriendRequestInput) error
 	DeleteFriendRequest(ctx context.Context, senderID string, recipientID string) error
+	CreateParty(ctx context.Context, leaderID string) (string, error)
 }
