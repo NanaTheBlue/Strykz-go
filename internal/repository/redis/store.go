@@ -43,6 +43,23 @@ func (s *store) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+func (s *store) AddNX(ctx context.Context, key string, value string, exp time.Duration) (bool, error) {
+
+	cmd := s.client.SetArgs(ctx, key, value, redis.SetArgs{
+		Mode: "NX",
+		TTL:  exp,
+	})
+
+	if err := cmd.Err(); err != nil {
+		if err == redis.Nil {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}
+
 func (s *store) Add(ctx context.Context, key string, value []byte, expiration time.Duration) error {
 
 	err := s.client.Set(ctx, key, value, expiration).Err()

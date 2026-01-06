@@ -166,6 +166,15 @@ func (r *socialRepo) CreateParty(ctx context.Context, leaderID string) (string, 
 	return partyID, tx.Commit(ctx)
 }
 
+func (r *socialRepo) CheckPartyLeader(ctx context.Context, partyID string) (string, error) {
+	var leaderID string
+	err := r.pool.QueryRow(ctx, "SELECT leader_id from parties WHERE id =$1", partyID).Scan(&leaderID)
+	if err != nil {
+		return "", err
+	}
+	return leaderID, nil
+}
+
 func (r *socialRepo) DeleteFriendRequest(ctx context.Context, senderID string, recipientID string) error {
 	_, err := r.pool.Exec(ctx, "DELETE FROM friend_requests WHERE sender_id = $1 AND recipient_id = $2", senderID, recipientID)
 	if err != nil {
