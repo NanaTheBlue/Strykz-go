@@ -2,6 +2,7 @@ package social
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -140,7 +141,7 @@ func TestSendFriendRequest_Integration(t *testing.T) {
 	select {
 	case msg := <-ch:
 		require.Contains(t, msg.Payload, user2)
-	case <-time.After(time.Second):
+	case <-ctx.Done():
 		t.Fatal("did not receive Redis notification")
 	}
 }
@@ -180,11 +181,11 @@ func TestBlockUser_Integration(t *testing.T) {
 func TestRejectNotification_Integration(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	_, s := setupService(testPool, testRedis)
+	social, notification := setupService(testPool, testRedis)
 	user1 := createTestUser(t, testPool, "user1")
 	user2 := createTestUser(t, testPool, "user2")
 
-	notifID, err := s.CreateNoPublishNotification(ctx, models.Notification{
+	notifID, err := notification.CreateNoPublishNotification(ctx, models.Notification{
 		SenderID:    user1,
 		RecipientID: user2,
 		Type:        "Test",
@@ -203,7 +204,7 @@ func TestRejectNotification_Integration(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, exists)
 
-	err = s.DeleteNotification(ctx, notifID)
+	err = social.RejectNotification(ctx, notifID)
 	require.NoError(t, err)
 
 	var exist bool
@@ -214,5 +215,46 @@ func TestRejectNotification_Integration(t *testing.T) {
 	).Scan(&exist)
 	require.NoError(t, err)
 	require.False(t, exist)
+
+}
+
+func TestPartyInvite_Integration(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+	s, _ := setupService(testPool, testRedis)
+	user1 := createTestUser(t, testPool, "user1")
+	user2 := createTestUser(t, testPool, "user2")
+	sub := testRedis.Subscribe(ctx, "notifications")
+	defer sub.Close()
+	_, err := sub.Receive(ctx)
+	require.NoError(t, err)
+	ch := sub.Channel()
+
+	partyID, err := s.CreateParty(ctx, user1)
+	require.NoError(t, err)
+
+	err = s.PartyInvite(ctx, models.PartyInviteRequest{
+		PartyID:     partyID,
+		SenderID:    user1,
+		RecipientID: user2,
+	})
+	require.NoError(t, err)
+
+	select {
+	case msg := <-ch:
+		var notif models.Notification
+		err := json.Unmarshal([]byte(msg.Payload), &notif)
+		require.NoError(t, err)
+
+		require.Equal(t, "party_invite", notif.Type)
+		require.Equal(t, user1, notif.SenderID)
+		require.Equal(t, user2, notif.RecipientID)
+
+		var data map[string]string
+		require.NoError(t, json.Unmarshal([]byte(notif.Data), &data))
+		require.Equal(t, partyID, data["party_id"])
+	case <-ctx.Done():
+		t.Fatal("did not receive Redis notification")
+	}
 
 }

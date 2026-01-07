@@ -90,8 +90,8 @@ func (s *socialService) AcceptNotification(ctx context.Context, notif models.Not
 	return nil
 }
 
-func (s *socialService) RejectNotification(ctx context.Context, notif models.Notification) error {
-	err := s.notificationservice.DeleteNotification(ctx, notif.ID)
+func (s *socialService) RejectNotification(ctx context.Context, notifID string) error {
+	err := s.notificationservice.DeleteNotification(ctx, notifID)
 	if err != nil {
 		return err
 	}
