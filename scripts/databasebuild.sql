@@ -11,6 +11,23 @@ CREATE TABLE IF NOT EXISTS users(
 );
 
 
+CREATE TABLE matches(
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    server_id UUID NOT NULL REFERENCES game_servers(id),
+    started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    ended_at TIMESTAMPTZ
+)
+
+CREATE TABLE game_servers(
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    region TEXT NOT NULL,
+    status TEXT NOT NULL,
+    current_match_id REFERENCES matches(id),
+    last_heartbeat TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+)
+
+
 
 
 
