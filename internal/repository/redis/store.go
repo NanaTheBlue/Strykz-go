@@ -134,42 +134,43 @@ func (s *store) Que(ctx context.Context, mode string, region string, player *mod
 
 }
 
+//RPopLPush
+
 func (s *store) DeQue(ctx context.Context, mode string, region string, count int) ([]*models.Player, error) {
 	queueKey := fmt.Sprintf("queue:%s:%s", mode, region)
 
-	playerBytes, err := s.client.ZRange(ctx, queueKey, 0, int64(count-1)).Result()
+	//redis gurantees lua scripts run atomically
+
+	script := `
+        local key = KEYS[1]
+        local needed = tonumber(ARGV[1])
+        
+        if redis.call("ZCARD", key) >= needed then
+            local members = redis.call("ZRANGE", key, 0, needed - 1)
+            if #members > 0 then
+                redis.call("ZREM", key, unpack(members))
+                return members
+            end
+        end
+        return nil
+    `
+	cmd := s.client.Eval(ctx, script, []string{queueKey}, count)
+
+	result, err := cmd.StringSlice()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read from queue: %w", err)
+		if err == redis.Nil {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to execute dequeue script: %w", err)
 	}
-
-	if len(playerBytes) == 0 {
-		return nil, nil
-	}
-
-	if err := s.client.ZRemRangeByRank(ctx, queueKey, 0, int64(count-1)).Err(); err != nil {
-		return nil, fmt.Errorf("failed to remove players from queue: %w", err)
-	}
-
 	var players []*models.Player
-	for _, pb := range playerBytes {
+	for _, JSON := range result {
 		var p models.Player
-		if err := json.Unmarshal([]byte(pb), &p); err != nil {
+		if err := json.Unmarshal([]byte(JSON), &p); err != nil {
+			// log error
 			continue
 		}
 		players = append(players, &p)
-	}
-
-	// adds the Players back in if count is less than needed
-	if len(players) < count {
-		pipe := s.client.Pipeline()
-		for _, p := range players {
-			playerJSON, _ := json.Marshal(p)
-			pipe.ZAdd(ctx, queueKey, redis.Z{
-				Score:  float64(time.Now().Unix()),
-				Member: playerJSON,
-			})
-		}
-		return nil, nil
 	}
 
 	return players, nil

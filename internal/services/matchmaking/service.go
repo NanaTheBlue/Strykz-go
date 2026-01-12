@@ -8,11 +8,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/nanagoboiler/internal/repository/redis"
 	"github.com/nanagoboiler/models"
 )
 
+// will prob need to add a matchmaking repo
 type matchmakingService struct {
 	RedisRepo redis.Store
 }
@@ -31,57 +31,55 @@ func (s *matchmakingService) InQue(ctx context.Context, player *models.Player) e
 	return nil
 }
 
-func (s *matchmakingService) DeQue(ctx context.Context, mode string, region string, count int) ([]*models.Player, error) {
+func (s *matchmakingService) StartMatchMaking(ctx context.Context, mode string) {
 
-	players, err := s.RedisRepo.DeQue(ctx, mode, region, count)
-	if err != nil {
-		return []*models.Player{}, err
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.QueReader(ctx, mode)
+		}
 	}
 
-	return players, nil
 }
 
-func (s *matchmakingService) DeQuePlayer(ctx context.Context, mode string, region string, playerID string) error {
-	err := s.RedisRepo.DeQuePlayer(ctx, mode, region, playerID)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *matchmakingService) StartMatchMaking(ctx context.Context) {
+// need to write tests for this when i wake up
+func (s *matchmakingService) QueReader(ctx context.Context, mode string) {
 	regions := []string{"us"}
 	modes := []string{"1v1"}
 
-	for {
-		for _, mode := range modes {
-			for _, region := range regions {
-				queueKey := fmt.Sprintf("queue:%s:%s", mode, region)
+	for _, mode := range modes {
+		for _, region := range regions {
+			queueKey := fmt.Sprintf("queue:%s:%s", mode, region)
 
-				matchCandidates, err := s.DeQue(ctx, queueKey, region, 2)
-				if err != nil {
-					log.Printf("Error reading from queue %s: %v", queueKey, err)
-					continue
-				}
-
-				if matchCandidates == nil {
-					log.Printf("No candidates found")
-					time.Sleep(5 * time.Second)
-					continue
-				}
-
-				player1 := matchCandidates[0]
-				player2 := matchCandidates[1]
-
-				matchID := uuid.New().String()
-				log.Printf("Creating match %s between %s and %s", matchID, player1.Player_id, player2.Player_id)
-
+			matchCandidates, err := s.RedisRepo.DeQue(ctx, queueKey, region, 2)
+			if err != nil {
+				log.Printf("Error reading from queue %s: %v", queueKey, err)
+				continue
 			}
+
+			if len(matchCandidates) < 2 {
+
+				continue
+			}
+
+			go s.CreateMatch(ctx, matchCandidates)
 
 		}
 
 	}
+
+}
+
+func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*models.Player) {
+
+	// put the match into the database obviously then
+	// assign them a server
+	// obviously this will get more complicated whe we are dealing with 5v5 mode
+	// notify players
 
 }

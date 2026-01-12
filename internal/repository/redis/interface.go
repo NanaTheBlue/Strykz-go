@@ -19,6 +19,6 @@ type Store interface {
 
 	// Should maybe seperate que logic if it grows to much
 	Que(ctx context.Context, mode string, region string, player *models.Player) error
-	DeQue(ctx context.Context, mode, region string, count int) ([]*models.Player, error)
+	DeQue(ctx context.Context, mode string, region string, count int) ([]*models.Player, error)
 	DeQuePlayer(ctx context.Context, mode string, region string, playerID string) error
 }

@@ -19,14 +19,16 @@ CREATE TABLE matches(
 )
 
 CREATE TABLE game_servers(
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id TEXT PRIMARY KEY,
     region TEXT NOT NULL,
     status TEXT NOT NULL,
-    current_match_id REFERENCES matches(id),
     last_heartbeat TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 )
 
+CREATE UNIQUE INDEX one_active_match_per_server
+ON matches (server_id)
+WHERE ended_at IS NULL;
 
 
 
