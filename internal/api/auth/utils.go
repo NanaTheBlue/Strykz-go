@@ -1,7 +1,6 @@
 package authapi
 
 import (
-	"errors"
 	"net/http"
 	"regexp"
 	"time"
@@ -13,12 +12,12 @@ func validateUsername(username string) error {
 	var usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]{3,15}$`)
 
 	if len(username) > 15 || len(username) < 3 {
-		return errors.New("Invalid Username Length")
+		return ErrUserLen
 
 	}
 
 	if !usernameRegex.MatchString(username) {
-		return errors.New("Invalid Characters in Username")
+		return ErrInvChar
 	}
 
 	return nil
@@ -29,14 +28,14 @@ func validatePassword(password string, confirmpassword string) error {
 
 	// Just basic password validation for now
 	if len(password) < 8 {
-		return errors.New("password length is to short")
+		return ERRPassWordLenShort
 
 	} else if len(password) > 16 {
-		return errors.New("password length is to long")
+		return ERRPassWordLenLong
 	}
 
 	if password != confirmpassword {
-		return errors.New("passwords dont match")
+		return ERRPassWordMatch
 	}
 
 	return nil
@@ -45,7 +44,7 @@ func validatePassword(password string, confirmpassword string) error {
 func validateEmail(email string) error {
 	var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 	if !emailRegex.MatchString(email) {
-		return errors.New("invalid email format")
+		return ERRInvEmailF
 	}
 
 	return nil
