@@ -4,27 +4,37 @@ CREATE TABLE IF NOT EXISTS users(
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     username VARCHAR(32) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
+    steam_id VARCHAR(36) UNIQUE,
     hashed_password TEXT NOT NULL,
     refresh_token TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 
 );
 
+CREATE TABLE IF NOT EXISTS bans(
+    id UUID PRIMARY kEY DEFAULT uuid_generate_v4(),
+    player_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reason TEXT,
+    ban_duration TIMESTAMPTZ NOT NULL
+);
+
+/* Todo Table For Previous Bans  */
+
+
+CREATE TABLE game_servers(
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    region TEXT NOT NULL,
+    status TEXT NOT NULL,
+    last_heartbeat TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
 CREATE TABLE matches(
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     server_id UUID NOT NULL REFERENCES game_servers(id),
     started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     ended_at TIMESTAMPTZ
-)
-
-CREATE TABLE game_servers(
-    id TEXT PRIMARY KEY,
-    region TEXT NOT NULL,
-    status TEXT NOT NULL,
-    last_heartbeat TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
+);
 
 CREATE UNIQUE INDEX one_active_match_per_server
 ON matches (server_id)

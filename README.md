@@ -10,52 +10,52 @@ The backend is designed with clear internal layering (API, services, repositorie
 
 ### Authentication & Sessions
 
-* Custom authentication system written in Go
-* PostgreSQL-backed refresh token storage
-* Secure login and registration flows
+- Custom authentication system written in Go
+- PostgreSQL-backed refresh token storage
+- Secure login and registration flows
 
 ### Matchmaking System
 
-* Fifo based matchmaking
-* Support for solo players and parties (soon)
-* Atomic match creation to prevent race conditions
-* Timeout handling for players who do not accept matches (soon)
-* **Match acceptance / decline flow (in progress)**
+- Fifo based matchmaking
+- Support for solo players and parties (soon)
+- Atomic match creation to prevent race conditions
+- Timeout handling for players who do not accept matches (soon)
+- **Match acceptance / decline flow (in progress)**
 
 ### Party System
 
-* Party creation and management
-* Party leader and member roles
-* Party invite system
+- Party creation and management
+- Party leader and member roles
+- Party invite system
 
 ### Real-Time Communication
 
-* WebSocket-based notifications
-* Online user tracking (Hub)
-* Party invites and matchmaking updates
+- WebSocket-based notifications
+- Online user tracking (Hub)
+- Party invites and matchmaking updates
 
 ### Messaging & Queues
 
-* Redis used as the primary matchmaking queue
-* Atomic queue operations to prevent race conditions
-* re-queueing handled via Redis
+- Redis used as the primary matchmaking queue
+- Atomic queue operations to prevent race conditions
+- re-queueing handled via Redis
 
 ### Social Features
 
-* Notifications service
-* Online presence tracking
-* Extensible foundation for friends and social interactions
+- Notifications service
+- Online presence tracking
+- Extensible foundation for friends and social interactions
 
 ---
 
 ## Tech Stack
 
-* **Language:** Go (Golang)
-* **Database:** PostgreSQL
-* **Cache / PubSub:** Redis
-* **Queue System:** Redis
-* **Real-Time:** WebSockets
-* **Frontend Integration:** Designed to be consumed by a Next.js BFF / frontend
+- **Language:** Go (Golang)
+- **Database:** PostgreSQL
+- **Cache / PubSub:** Redis
+- **Queue System:** Redis
+- **Real-Time:** WebSockets
+- **Frontend Integration:** Designed to be consumed by a Next.js BFF / frontend
 
 ---
 
@@ -63,23 +63,23 @@ The backend is designed with clear internal layering (API, services, repositorie
 
 The backend is implemented as a **single Go application** with clear internal separation of concerns:
 
-* **API Layer**
+- **API Layer**
 
-  * HTTP endpoints for authentication, matchmaking, and social features
+  - HTTP endpoints for authentication, matchmaking, and social features
 
-* **Service Layer**
+- **Service Layer**
 
-  * Encapsulates business logic (matchmaking, parties, notifications)
-  * Coordinates between PostgreSQL, Redis, and WebSockets
+  - Encapsulates business logic (matchmaking, parties, notifications)
+  - Coordinates between PostgreSQL, Redis, and WebSockets
 
-* **Repository Layer**
+- **Repository Layer**
 
-  * PostgreSQL repositories for persistent data
-  * Redis for matchmaking queues and ephemeral state
+  - PostgreSQL repositories for persistent data
+  - Redis for matchmaking queues and ephemeral state
 
-* **Real-Time Layer**
+- **Real-Time Layer**
 
-  * WebSocket hub for pushing notifications and matchmaking events
+  - WebSocket hub for pushing notifications and matchmaking events
 
 This structure keeps the codebase modular.
 
@@ -92,12 +92,13 @@ This structure keeps the codebase modular.
 3. Atomic Redis operations ensure safe dequeuing and match creation
 4. When a valid match is found:
 
-   * A unique match ID is generated
-   * Players are notified via WebSocket
-   * Acceptance handling is planned but not yet finalized
+   - A unique match ID is generated
+   - Players are notified via WebSocket
+   - Acceptance handling is planned but not yet finalized
+
 5. If a match cannot be completed:
 
-   * Players are safely returned to the queue
+   - Players are safely returned to the queue
 
 ---
 
@@ -105,48 +106,48 @@ This structure keeps the codebase modular.
 
 ### Authentication
 
-* `POST /register`
-* `POST /login`
-* `GET /renew`
+- `POST /register`
+- `POST /login`
+- `GET /renew`
 
 ### Matchmaking
 
-* `POST /matchmaking/queue`
-* `POST /matchmaking/dequeue` (Future)
-* `POST /matchmaking/accept` (Future
-* `POST /matchmaking/decline` (Future)
+- `POST /matchmaking/queue`
+- `POST /matchmaking/dequeue` (Future)
+- `POST /matchmaking/accept` (Future)
+- `POST /matchmaking/decline` (Future)
 
 ### Parties (Future Routes, Service is already made)
 
-* `POST /parties/create`
-* `POST /parties/invite`
-* `POST /parties/accept`
-* `POST /parties/leave`
+- `POST /parties/create`
+- `POST /parties/invite`
+- `POST /parties/accept`
+- `POST /parties/leave`
 
 ### Social / Notifications
 
-* `GET /notification/` (WebSocket connection)
+- `GET /notification/` (WebSocket connection)
 
 ---
 
 ## Data Storage
 
-* **PostgreSQL**
+- **PostgreSQL**
 
-  * Users
-  * Sessions
-  * Parties and party members
-  * Match records
+  - Users
+  - Sessions
+  - Parties and party members
+  - Match records
 
-* **Redis**
+- **Redis**
 
-  * Matchmaking queues
+  - Matchmaking queues
 
-  * Online users (Future)
+  - Online users (Future)
 
-  * Pub/Sub for notifications
+  - Pub/Sub for notifications
 
-  * Matchmaking queue
+  - Matchmaking queue
 
 ---
 
@@ -154,9 +155,9 @@ This structure keeps the codebase modular.
 
 ### Prerequisites
 
-* Go 1.25.3+
-* PostgreSQL
-* Redis
+- Go 1.25.3+
+- PostgreSQL
+- Redis
 
 ### Environment Variables
 
@@ -170,27 +171,26 @@ TEST_REDIS_ADDRESS=
 TEST_REDIS_PASSWORD=
 ```
 
-
 ## Testing
 
-* Unit tests for services and repositories
-* Integration tests for Redis, PostgreSQL, and WebSocket flows
-* Test utilities for creating users and cleaning up state
+- Unit tests for services and repositories
+- Integration tests for Redis, PostgreSQL, and WebSocket flows
+- Test utilities for creating users and cleaning up state
 
 ---
 
 ## Design Goals
 
-* Predictable and debuggable matchmaking logic
-* Clear separation of concerns
-* Real-time responsiveness
-* Safe concurrency and atomic operations
-* Extensible foundation for future features
+- Predictable and debuggable matchmaking logic
+- Clear separation of concerns
+- Real-time responsiveness
+- Safe concurrency and atomic operations
+- Extensible foundation for future features
 
 ---
 
 ## Future Improvements
 
-* Match history and statistics
-* Ranked seasons
-* Horizontal scaling for matchmaking workers
+- Match history and statistics
+- Ranked seasons
+- Horizontal scaling for matchmaking workers

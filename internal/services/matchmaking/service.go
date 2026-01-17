@@ -23,6 +23,8 @@ func NewMatchmakingService(redisRepo redis.Store) Service {
 
 func (s *matchmakingService) InQue(ctx context.Context, player *models.Player) error {
 
+	// Should Prob do some validation here to make sure none of these mfs is banned and shit
+
 	err := s.RedisRepo.Que(ctx, "1v1", "us", player)
 	if err != nil {
 		return err
