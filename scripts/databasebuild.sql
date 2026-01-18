@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS bans(
 /* Todo Table For Previous Bans  */
 
 
-CREATE TABLE game_servers(
+CREATE TABLE IF NOT EXISTS game_servers(
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     region TEXT NOT NULL,
     status TEXT NOT NULL,
@@ -29,14 +29,14 @@ CREATE TABLE game_servers(
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE matches(
+CREATE TABLE IF NOT EXISTS  matches(
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     server_id UUID NOT NULL REFERENCES game_servers(id),
     started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     ended_at TIMESTAMPTZ
 );
 
-CREATE UNIQUE INDEX one_active_match_per_server
+CREATE UNIQUE INDEX IF NOT EXISTS one_active_match_per_server
 ON matches (server_id)
 WHERE ended_at IS NULL;
 

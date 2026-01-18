@@ -7,7 +7,10 @@ import (
 	authapi "github.com/nanagoboiler/internal/api/auth"
 	notificationsapi "github.com/nanagoboiler/internal/api/notifications"
 	matchmakingapi "github.com/nanagoboiler/internal/api/que"
+	grpcserver "github.com/nanagoboiler/internal/grpc"
+
 	"github.com/nanagoboiler/internal/services/matchmaking"
+	"github.com/nanagoboiler/internal/services/orchestrator"
 
 	"github.com/nanagoboiler/internal/bootstrap"
 	"github.com/nanagoboiler/internal/services/auth"
@@ -35,6 +38,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	// Repositories
 	authRepo := authrepo.NewUserRepository(pool)
 	tokenRepo := authrepo.NewTokensRepository(pool)
@@ -48,6 +52,10 @@ func main() {
 	authService := auth.NewAuthService(authRepo, tokenRepo)
 	matchmakingService := matchmaking.NewMatchmakingService(redisRepo)
 	notificationService := notifications.NewnotificationsService(hub, redisRepo, notificationRepo)
+	orchestrator := orchestrator.NewOrchestrator()
+
+	//grpc
+	grpcserver.StartGRPC(orchestrator)
 
 	//logger
 	//logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
