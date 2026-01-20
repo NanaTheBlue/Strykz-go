@@ -17,6 +17,8 @@ func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
 		}
 
 		switch payload := evt.Payload.(type) {
+		case *pb.SidecarEvent_Heartbeat:
+			log.Printf("beat: %v", payload)
 
 		}
 	}
