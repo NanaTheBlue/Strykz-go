@@ -12,11 +12,11 @@ import (
 
 type SidecarServer struct {
 	pb.UnimplementedSidecarServiceServer
-	orchestrator *orchestrator.Orchestrator
+	orchestrator orchestrator.Service
 }
 
 func StartGRPC(
-	orchestrator *orchestrator.Orchestrator,
+	orchestrator orchestrator.Service,
 
 ) {
 	lis, err := net.Listen("tcp", ":6767")

@@ -1,7 +1,9 @@
 package grpcserver
 
 import (
+	"context"
 	"log"
+	"time"
 
 	pb "github.com/nanagoboiler/gen"
 )
@@ -18,8 +20,17 @@ func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
 
 		switch payload := evt.Payload.(type) {
 		case *pb.SidecarEvent_Heartbeat:
-			log.Printf("beat: %v", payload)
+			serverID := evt.GetServerId()
+			ctx, cancel := context.WithTimeout(stream.Context(), 500*time.Millisecond)
+			defer cancel()
 
+			err := s.orchestrator.UpdateHeartbeat(serverID, ctx)
+			if err != nil {
+				return err
+			}
+			log.Printf("heartbeat from %s", serverID)
+		default:
+			log.Printf("unhandled event type %T from %s", payload, evt.GetServerId())
 		}
 	}
 }

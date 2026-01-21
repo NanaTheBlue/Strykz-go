@@ -17,6 +17,7 @@ import (
 
 	authrepo "github.com/nanagoboiler/internal/repository/auth"
 	notificationrepo "github.com/nanagoboiler/internal/repository/notification"
+	orchestratorrepo "github.com/nanagoboiler/internal/repository/orchestrator"
 	redis "github.com/nanagoboiler/internal/repository/redis"
 	"github.com/nanagoboiler/internal/services/notifications"
 
@@ -44,6 +45,7 @@ func main() {
 	tokenRepo := authrepo.NewTokensRepository(pool)
 	redisRepo := redis.NewRedisInstance(redisClient)
 	notificationRepo := notificationrepo.NewNotificationsRepository(pool)
+	orchestratorrepo := orchestratorrepo.NewOrchestratorRepository(pool)
 
 	//Connection Manager
 	hub := notifications.NewHub()
@@ -52,7 +54,8 @@ func main() {
 	authService := auth.NewAuthService(authRepo, tokenRepo)
 	matchmakingService := matchmaking.NewMatchmakingService(redisRepo)
 	notificationService := notifications.NewnotificationsService(hub, redisRepo, notificationRepo)
-	orchestrator := orchestrator.NewOrchestrator()
+
+	orchestrator := orchestrator.NewOrchestrator(orchestratorrepo)
 
 	//grpc
 	grpcserver.StartGRPC(orchestrator)
