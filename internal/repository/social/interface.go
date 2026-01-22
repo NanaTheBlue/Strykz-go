@@ -14,4 +14,5 @@ type SocialRepository interface {
 	DeleteFriendRequest(ctx context.Context, senderID string, recipientID string) error
 	CreateParty(ctx context.Context, leaderID string) (string, error)
 	CheckPartyLeader(ctx context.Context, partyID string) (string, error)
+	AddReport(ctx context.Context, reportreq models.ReportRequestInput) error
 }

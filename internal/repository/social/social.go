@@ -18,6 +18,22 @@ func NewSocialRepository(pool *pgxpool.Pool) SocialRepository {
 	return &socialRepo{pool: pool}
 }
 
+func (r *socialRepo) AddReport(ctx context.Context, reportreq models.ReportRequestInput) error {
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	cmd, err := tx.Exec(ctx, `INSERT INTO reports (reporter_id, reportee_id, report_type, reason) VALUES ($1, $2 ,$3 ,$4)
+		ON CONFLICT DO NOTHING`, reportreq.ReporterID, reportreq.ReporteeID, reportreq.Type, reportreq.Reason)
+
+	if cmd.RowsAffected() == 0 {
+		return errors.New("report failed")
+	}
+
+	return tx.Commit(ctx)
+}
+
 func (r *socialRepo) AddFriend(ctx context.Context, userID string, friendID string) error {
 	// check if theres a friend request if not return
 

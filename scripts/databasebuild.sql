@@ -11,6 +11,18 @@ CREATE TABLE IF NOT EXISTS users(
 
 );
 
+CREATE TABLE IF NOT EXISTS reports(
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    reporter_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reportee_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    report_type TEXT NOT NULL,
+    reason TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (reporter_id, reportee_id)
+    CHECK (reporter_id <> reportee_id)
+)
+
+
 CREATE TABLE IF NOT EXISTS bans(
     id UUID PRIMARY kEY DEFAULT uuid_generate_v4(),
     player_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

@@ -26,9 +26,11 @@ func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
 
 			err := s.orchestrator.UpdateHeartbeat(serverID, ctx)
 			if err != nil {
-				return err
+				log.Println(err)
 			}
 			log.Printf("heartbeat from %s", serverID)
+		case *pb.SidecarEvent_ServerStarted:
+
 		default:
 			log.Printf("unhandled event type %T from %s", payload, evt.GetServerId())
 		}

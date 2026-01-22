@@ -27,11 +27,15 @@ func NewsocialService(notificationservice notifications.Service, socialrepo soci
 	}
 }
 
-var (
-	ErrInviteAlreadySent  = errors.New("invite already sent")
-	ErrNotPartyLeader     = errors.New("sender is not the party leader")
-	ErrUserAlreadyInParty = errors.New("recipient is already in a party")
-)
+func (s *socialService) ReportUser(ctx context.Context, reportreq models.ReportRequestInput) error {
+
+	err := s.socialrepo.AddReport(ctx, reportreq)
+	if err != nil {
+
+	}
+
+	return nil
+}
 
 func (s *socialService) SendFriendRequest(ctx context.Context, friendreq models.FriendRequestInput) error {
 
@@ -58,6 +62,7 @@ func (s *socialService) SendFriendRequest(ctx context.Context, friendreq models.
 
 func (s *socialService) BlockUser(ctx context.Context, req models.BlockRequest) error {
 
+	// idk if we should have validation right here
 	if req.BlockerID == req.BlockedID {
 		return errors.New("cannot block yourself")
 	}

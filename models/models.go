@@ -46,6 +46,13 @@ type FriendRequestInput struct {
 	RecipientID string
 }
 
+type ReportRequestInput struct {
+	ReporteeID string `json:"reportee_id"`
+	ReporterID string `json:"reporter_id"`
+	Type       string `json:"report_type"`
+	Reason     string `json:"reason"`
+}
+
 type BlockRequest struct {
 	BlockerID string `json:"blocker_id"`
 	BlockedID string `json:"blocked_id"`
