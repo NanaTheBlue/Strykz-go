@@ -18,9 +18,9 @@ CREATE TABLE IF NOT EXISTS reports(
     report_type TEXT NOT NULL,
     reason TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (reporter_id, reportee_id)
+    UNIQUE (reporter_id, reportee_id),
     CHECK (reporter_id <> reportee_id)
-)
+);
 
 
 CREATE TABLE IF NOT EXISTS bans(
@@ -30,7 +30,6 @@ CREATE TABLE IF NOT EXISTS bans(
     ban_duration TIMESTAMPTZ NOT NULL
 );
 
-/* Todo Table For Previous Bans  */
 
 
 CREATE TABLE IF NOT EXISTS game_servers(

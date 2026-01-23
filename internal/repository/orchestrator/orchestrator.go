@@ -18,7 +18,7 @@ func NewOrchestratorRepository(pool *pgxpool.Pool) OrchestratoryRepository {
 func (r *orchastratorRepo) UpdateHeartBeat(serverid string, ctx context.Context) error {
 	currentTime := time.Now()
 
-	_, err := r.pool.Exec(ctx, "UPDATE game_servers SET last_heartbeat = $1  WHERE server_id = $2 ", currentTime, serverid)
+	_, err := r.pool.Exec(ctx, "UPDATE game_servers SET last_heartbeat = $1  WHERE id = $2 ", currentTime, serverid)
 	if err != nil {
 		return err
 	}

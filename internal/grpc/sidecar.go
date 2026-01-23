@@ -30,6 +30,7 @@ func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
 			}
 			log.Printf("heartbeat from %s", serverID)
 		case *pb.SidecarEvent_ServerStarted:
+			log.Println("Bing Bong")
 
 		default:
 			log.Printf("unhandled event type %T from %s", payload, evt.GetServerId())
