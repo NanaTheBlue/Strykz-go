@@ -46,6 +46,12 @@ type FriendRequestInput struct {
 	RecipientID string
 }
 
+type Gameserver struct {
+	ID            string
+	Region        string
+	Status        string
+	LastHeartbeat time.Time
+}
 type ReportRequestInput struct {
 	ReporteeID string `json:"reportee_id"`
 	ReporterID string `json:"reporter_id"`
