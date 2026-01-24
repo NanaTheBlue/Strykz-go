@@ -5,15 +5,18 @@ import (
 
 	orchestratorrepo "github.com/nanagoboiler/internal/repository/orchestrator"
 	"github.com/nanagoboiler/models"
+	"github.com/vultr/govultr/v3"
 )
 
 type Orchestrator struct {
 	orchestratorrepo orchestratorrepo.OrchestratoryRepository
+	vultrclient      govultr.Client
 }
 
-func NewOrchestrator(orchestratorrepo orchestratorrepo.OrchestratoryRepository) Service {
+func NewOrchestrator(orchestratorrepo orchestratorrepo.OrchestratoryRepository, vultrclient govultr.Client) Service {
 	return &Orchestrator{
 		orchestratorrepo: orchestratorrepo,
+		vultrclient:      vultrclient,
 	}
 }
 

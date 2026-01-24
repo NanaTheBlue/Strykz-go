@@ -8,12 +8,13 @@ import (
 	notificationsapi "github.com/nanagoboiler/internal/api/notifications"
 	matchmakingapi "github.com/nanagoboiler/internal/api/que"
 	grpcserver "github.com/nanagoboiler/internal/grpc"
-
-	"github.com/nanagoboiler/internal/services/matchmaking"
-	"github.com/nanagoboiler/internal/services/orchestrator"
+	"golang.org/x/oauth2"
 
 	"github.com/nanagoboiler/internal/bootstrap"
 	"github.com/nanagoboiler/internal/services/auth"
+	"github.com/nanagoboiler/internal/services/matchmaking"
+	"github.com/nanagoboiler/internal/services/orchestrator"
+	"github.com/vultr/govultr/v3"
 
 	authrepo "github.com/nanagoboiler/internal/repository/auth"
 	notificationrepo "github.com/nanagoboiler/internal/repository/notification"
@@ -30,6 +31,11 @@ func main() {
 	postgresURL := os.Getenv("POSTGRES_URL")
 	address := os.Getenv("REDIS_ADDRESS")
 	password := os.Getenv("REDIS_PASSWORD")
+	apiKey := os.Getenv("VultrAPIKey")
+
+	config := &oauth2.Config{}
+	ts := config.TokenSource(ctx, &oauth2.Token{AccessToken: apiKey})
+	vultrClient := govultr.NewClient(oauth2.NewClient(ctx, ts))
 
 	pool, err := bootstrap.NewPostgresPool(ctx, postgresURL)
 	if err != nil {
@@ -55,7 +61,7 @@ func main() {
 	matchmakingService := matchmaking.NewMatchmakingService(redisRepo)
 	notificationService := notifications.NewnotificationsService(hub, redisRepo, notificationRepo)
 
-	orchestrator := orchestrator.NewOrchestrator(orchestratorrepo)
+	orchestrator := orchestrator.NewOrchestrator(orchestratorrepo, *vultrClient)
 
 	//grpc
 	grpcserver.StartGRPC(orchestrator)
