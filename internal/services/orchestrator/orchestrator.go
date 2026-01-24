@@ -36,10 +36,23 @@ func (s *Orchestrator) SelectServer(ctx context.Context, region string) (models.
 	return Gameserver, nil
 }
 
-func (s *Orchestrator) CreateServer(ctx context.Context, region string) error {
-	// this will like create a server by talking to the vultr api and being like hey i want a server
+func (s *Orchestrator) CreateServer(ctx context.Context, region string) (string, error) {
+	// todo make this more modular rn its just in testing phase so it dont matter
+	enableIPv6 := false
+	instanceOptions := &govultr.InstanceCreateReq{
+		Label:      "awesome-go-app",
+		Hostname:   "awesome-go.com",
+		Backups:    "enabled",
+		EnableIPv6: &enableIPv6,
+		OsID:       362,
+		Plan:       "vc2-1c-1gb",
+		Region:     region,
+	}
 
-	// atleast thats the plan :D
+	instance, _, err := s.vultrclient.Instance.Create(ctx, instanceOptions)
+	if err != nil {
+		return "", err
+	}
 
-	return nil
+	return instance.ID, nil
 }
