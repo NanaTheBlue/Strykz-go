@@ -61,7 +61,7 @@ func main() {
 	matchmakingService := matchmaking.NewMatchmakingService(redisRepo)
 	notificationService := notifications.NewnotificationsService(hub, redisRepo, notificationRepo)
 
-	orchestrator := orchestrator.NewOrchestrator(orchestratorrepo, *vultrClient)
+	orchestrator := orchestrator.NewOrchestrator(orchestratorrepo, vultrClient)
 
 	//grpc
 	grpcserver.StartGRPC(orchestrator)

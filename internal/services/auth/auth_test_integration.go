@@ -42,6 +42,7 @@ func TestMain(m *testing.M) {
 }
 
 func setupService_int(pool *pgxpool.Pool) *authService {
+	// this is bad will rewrite like is done in the orchestrator_int tests
 
 	UserRepo := authrepo.NewUserRepository(pool)
 	TokenRepo := authrepo.NewTokensRepository(pool)
@@ -52,4 +53,8 @@ func setupService_int(pool *pgxpool.Pool) *authService {
 	}
 
 	return service
+}
+
+func createTestUser_int() {
+
 }

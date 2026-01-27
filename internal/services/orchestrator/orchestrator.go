@@ -10,10 +10,10 @@ import (
 
 type Orchestrator struct {
 	orchestratorrepo orchestratorrepo.OrchestratoryRepository
-	vultrclient      govultr.Client
+	vultrclient      *govultr.Client
 }
 
-func NewOrchestrator(orchestratorrepo orchestratorrepo.OrchestratoryRepository, vultrclient govultr.Client) Service {
+func NewOrchestrator(orchestratorrepo orchestratorrepo.OrchestratoryRepository, vultrclient *govultr.Client) Service {
 	return &Orchestrator{
 		orchestratorrepo: orchestratorrepo,
 		vultrclient:      vultrclient,
@@ -44,7 +44,7 @@ func (s *Orchestrator) CreateServer(ctx context.Context, region string) (string,
 		Hostname:   "awesome-go.com",
 		Backups:    "enabled",
 		EnableIPv6: &enableIPv6,
-		OsID:       362,
+		OsID:       2284,
 		Plan:       "vc2-1c-1gb",
 		Region:     region,
 	}
@@ -53,6 +53,8 @@ func (s *Orchestrator) CreateServer(ctx context.Context, region string) (string,
 	if err != nil {
 		return "", err
 	}
+
+	//todo add the Server to the database
 
 	return instance.ID, nil
 }
