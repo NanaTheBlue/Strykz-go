@@ -26,12 +26,12 @@ func (s *Orchestrator) UpdateHeartbeat(ctx context.Context, serverID string) err
 	return s.orchestratorrepo.UpdateHeartBeat(ctx, serverID)
 }
 
-func (s *Orchestrator) SelectServer(ctx context.Context, region string) (models.Gameserver, error) {
+func (s *Orchestrator) SelectServer(ctx context.Context, region string) (*models.Gameserver, error) {
 	//TODO: Better Error Handling honestly i should make this a github issue
 
-	Gameserver, err := s.orchestratorrepo.SelectServer(ctx, region)
+	Gameserver, err := s.orchestratorrepo.AcquireReadyServer(ctx, region)
 	if err != nil {
-		return models.Gameserver{}, err
+		return &models.Gameserver{}, err
 	}
 	return Gameserver, nil
 }

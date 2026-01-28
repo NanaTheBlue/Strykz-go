@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS game_servers(
     region TEXT NOT NULL,
     status TEXT NOT NULL,
     last_heartbeat TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS  matches(

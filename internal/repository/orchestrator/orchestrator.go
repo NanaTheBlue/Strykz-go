@@ -4,38 +4,75 @@ import (
 	"context"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/nanagoboiler/internal/repository/db"
 	"github.com/nanagoboiler/models"
 )
 
 type orchestratorRepo struct {
-	pool *pgxpool.Pool
+	db db.DB
 }
 
-func NewOrchestratorRepository(pool *pgxpool.Pool) OrchestratoryRepository {
-	return &orchestratorRepo{pool: pool}
+func NewOrchestratorRepository(db db.DB) OrchestratoryRepository {
+	return &orchestratorRepo{db: db}
 }
 
 func (r *orchestratorRepo) UpdateHeartBeat(ctx context.Context, serverid string) error {
 	currentTime := time.Now()
 
-	_, err := r.pool.Exec(ctx, "UPDATE game_servers SET last_heartbeat = $1  WHERE id = $2 ", currentTime, serverid)
+	_, err := r.db.Exec(ctx, "UPDATE game_servers SET last_heartbeat = $1  WHERE id = $2 ", currentTime, serverid)
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (r *orchestratorRepo) UpdateServer(ctx context.Context, id string, status models.ServerStatus) error {
+
 	return nil
 }
 
 func (r *orchestratorRepo) InsertServer(ctx context.Context, server models.Gameserver) error {
-	_, err := r.pool.Exec(ctx, "INSERT INTO game_servers (id, region, status) VALUES ($1, $2, $3)", server.ID, server.Region, server.Status)
+	_, err := r.db.Exec(ctx, "INSERT INTO game_servers (id, region, status) VALUES ($1, $2, $3)", server.ID, server.Region, server.Status)
 	if err != nil {
 		return err
 	}
 
 	return nil
 }
+func (r *orchestratorRepo) AcquireReadyServer(ctx context.Context, region string) (*models.Gameserver, error) {
+	row := r.db.QueryRow(ctx, `
+		UPDATE game_servers
+		SET status = 'BUSY'
+		WHERE id = (
+			SELECT id
+			FROM game_servers
+			WHERE region = $1 AND status = 'READY'
+			FOR UPDATE SKIP LOCKED
+			LIMIT 1
+		)
+		RETURNING id, region, status, last_heartbeat, created_at
+	`, region)
+
+	var s models.Gameserver
+	if err := row.Scan(
+		&s.ID,
+		&s.Region,
+		&s.Status,
+		&s.LastHeartbeat,
+		&s.CreatedAt,
+	); err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &s, nil
+}
+
 func (r *orchestratorRepo) DeleteServer(ctx context.Context, id string) error {
-	_, err := r.pool.Exec(ctx, "DELETE FROM game_servers WHERE id = $1", id)
+	_, err := r.db.Exec(ctx, "DELETE FROM game_servers WHERE id = $1", id)
 	if err != nil {
 		return err
 	}
@@ -45,7 +82,7 @@ func (r *orchestratorRepo) DeleteServer(ctx context.Context, id string) error {
 func (r *orchestratorRepo) GetDeadServers(ctx context.Context, cutoff time.Time) ([]models.Gameserver, error) {
 
 	// cutoff should be Time.Now() - 1 minute
-	rows, err := r.pool.Query(ctx, "SELECT id, region, status, last_heartbeat, created_at FROM game_servers WHERE last_heartbeat < $1", cutoff)
+	rows, err := r.db.Query(ctx, "SELECT id, region, status, last_heartbeat, created_at FROM game_servers WHERE last_heartbeat < $1", cutoff)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +109,7 @@ func (r *orchestratorRepo) GetDeadServers(ctx context.Context, cutoff time.Time)
 
 func (r *orchestratorRepo) GetServersByRegion(ctx context.Context, region string) ([]models.Gameserver, error) {
 
-	rows, err := r.pool.Query(ctx, "SELECT * FROM game_servers WHERE region = $1", region)
+	rows, err := r.db.Query(ctx, "SELECT * FROM game_servers WHERE region = $1", region)
 	if err != nil {
 		return nil, err
 	}
@@ -96,38 +133,4 @@ func (r *orchestratorRepo) GetServersByRegion(ctx context.Context, region string
 
 	return servers, rows.Err()
 
-}
-
-func (r *orchestratorRepo) SelectServer(ctx context.Context, region string) (models.Gameserver, error) {
-
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return models.Gameserver{}, err
-	}
-	defer tx.Rollback(ctx)
-
-	var Gameserver models.Gameserver
-
-	err = tx.QueryRow(ctx, "SELECT id,region,status,last_heartbeat FROM game_servers WHERE region = $1 AND status = $2 FOR UPDATE SKIP LOCKED", region, "ready").Scan(
-		&Gameserver.ID,
-		&Gameserver.Region,
-		&Gameserver.Status,
-		&Gameserver.LastHeartbeat,
-	)
-	if err != nil {
-		return models.Gameserver{}, err
-	}
-
-	_, err = tx.Exec(ctx, "UPDATE game_servers SET status = $1, updated_at = $2 WHERE id = $3 ", "used", time.Now(), Gameserver.ID)
-	if err != nil {
-		return models.Gameserver{}, err
-	}
-
-	err = tx.Commit(ctx)
-
-	if err != nil {
-		return models.Gameserver{}, err
-	}
-	Gameserver.Status = "used"
-	return Gameserver, nil
 }
