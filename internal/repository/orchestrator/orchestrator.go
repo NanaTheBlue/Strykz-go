@@ -16,7 +16,7 @@ func NewOrchestratorRepository(pool *pgxpool.Pool) OrchestratoryRepository {
 	return &orchestratorRepo{pool: pool}
 }
 
-func (r *orchestratorRepo) UpdateHeartBeat(serverid string, ctx context.Context) error {
+func (r *orchestratorRepo) UpdateHeartBeat(ctx context.Context, serverid string) error {
 	currentTime := time.Now()
 
 	_, err := r.pool.Exec(ctx, "UPDATE game_servers SET last_heartbeat = $1  WHERE id = $2 ", currentTime, serverid)
@@ -24,6 +24,40 @@ func (r *orchestratorRepo) UpdateHeartBeat(serverid string, ctx context.Context)
 		return err
 	}
 	return nil
+}
+
+func (r *orchestratorRepo) GetDeadServers(ctx context.Context, cutoff time.Time) ([]models.Gameserver, error) {
+
+ rows,err : = rows, err := r.pool.Query(ctx, "SELECT * FROM game_servers WHERE regions = $1", cutoff)
+
+}
+
+func (r *orchestratorRepo) GetServersByRegion(ctx context.Context, region string) ([]models.Gameserver, error) {
+
+	rows, err := r.pool.Query(ctx, "SELECT * FROM game_servers WHERE regions = $1", region)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var servers []models.Gameserver
+
+	for rows.Next() {
+		var s models.Gameserver
+		if err := rows.Scan(
+			&s.ID,
+			&s.Region,
+			&s.Status,
+			&s.LastHeartbeat,
+			&s.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		servers = append(servers, s)
+	}
+
+	return servers, rows.Err()
+
 }
 
 func (r *orchestratorRepo) SelectServer(ctx context.Context, region string) (models.Gameserver, error) {

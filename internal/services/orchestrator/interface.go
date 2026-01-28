@@ -3,6 +3,6 @@ package orchestrator
 import "context"
 
 type Service interface {
-	UpdateHeartbeat(serverID string, ctx context.Context) error
+	UpdateHeartbeat(ctx context.Context, serverID string) error
 	CreateServer(ctx context.Context, region string) (string, error)
 }

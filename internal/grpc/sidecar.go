@@ -24,7 +24,7 @@ func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
 			ctx, cancel := context.WithTimeout(stream.Context(), 500*time.Millisecond)
 			defer cancel()
 
-			err := s.orchestrator.UpdateHeartbeat(serverID, ctx)
+			err := s.orchestrator.UpdateHeartbeat(ctx, serverID)
 			if err != nil {
 				log.Println(err)
 			}

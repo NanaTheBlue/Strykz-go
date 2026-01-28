@@ -20,10 +20,10 @@ func NewOrchestrator(orchestratorrepo orchestratorrepo.OrchestratoryRepository, 
 	}
 }
 
-func (s *Orchestrator) UpdateHeartbeat(serverID string, ctx context.Context) error {
+func (s *Orchestrator) UpdateHeartbeat(ctx context.Context, serverID string) error {
 
 	//TODO: Better Error Handling
-	return s.orchestratorrepo.UpdateHeartBeat(serverID, ctx)
+	return s.orchestratorrepo.UpdateHeartBeat(ctx, serverID)
 }
 
 func (s *Orchestrator) SelectServer(ctx context.Context, region string) (models.Gameserver, error) {
