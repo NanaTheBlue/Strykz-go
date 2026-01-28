@@ -26,15 +26,53 @@ func (r *orchestratorRepo) UpdateHeartBeat(ctx context.Context, serverid string)
 	return nil
 }
 
+func (r *orchestratorRepo) InsertServer(ctx context.Context, server models.Gameserver) error {
+	_, err := r.pool.Exec(ctx, "INSERT INTO game_servers (id, region, status) VALUES ($1, $2, $3)", server.ID, server.Region, server.Status)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (r *orchestratorRepo) DeleteServer(ctx context.Context, id string) error {
+	_, err := r.pool.Exec(ctx, "DELETE FROM game_servers WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *orchestratorRepo) GetDeadServers(ctx context.Context, cutoff time.Time) ([]models.Gameserver, error) {
 
- rows,err : = rows, err := r.pool.Query(ctx, "SELECT * FROM game_servers WHERE regions = $1", cutoff)
+	// cutoff should be Time.Now() - 1 minute
+	rows, err := r.pool.Query(ctx, "SELECT id, region, status, last_heartbeat, created_at FROM game_servers WHERE last_heartbeat < $1", cutoff)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var servers []models.Gameserver
+	for rows.Next() {
+		var s models.Gameserver
+		if err := rows.Scan(
+			&s.ID,
+			&s.Region,
+			&s.Status,
+			&s.LastHeartbeat,
+			&s.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		servers = append(servers, s)
+	}
+
+	return servers, rows.Err()
 
 }
 
 func (r *orchestratorRepo) GetServersByRegion(ctx context.Context, region string) ([]models.Gameserver, error) {
 
-	rows, err := r.pool.Query(ctx, "SELECT * FROM game_servers WHERE regions = $1", region)
+	rows, err := r.pool.Query(ctx, "SELECT * FROM game_servers WHERE region = $1", region)
 	if err != nil {
 		return nil, err
 	}

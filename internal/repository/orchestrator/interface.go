@@ -12,4 +12,6 @@ type OrchestratoryRepository interface {
 	SelectServer(ctx context.Context, region string) (models.Gameserver, error)
 	GetDeadServers(ctx context.Context, cutoff time.Time) ([]models.Gameserver, error)
 	GetServersByRegion(ctx context.Context, region string) ([]models.Gameserver, error)
+	InsertServer(ctx context.Context, server models.Gameserver) error
+	DeleteServer(ctx context.Context, id string) error
 }
