@@ -10,17 +10,22 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	matchmakingrepo "github.com/nanagoboiler/internal/repository/matchmaking"
+	orchestratorrepo "github.com/nanagoboiler/internal/repository/orchestrator"
 	"github.com/nanagoboiler/internal/repository/redis"
 	"github.com/nanagoboiler/models"
 )
 
 // will prob need to add a matchmaking repo
 type matchmakingService struct {
-	RedisRepo redis.Store
+	RedisRepo        redis.Store
+	pool             *pgxpool.Pool
+	matchmakingrepo  matchmakingrepo.MatchmakingRepository
+	orchestratorrepo orchestratorrepo.OrchestratoryRepository
 }
 
-func NewMatchmakingService(redisRepo redis.Store) Service {
-	return &matchmakingService{RedisRepo: redisRepo}
+func NewMatchmakingService(redisRepo redis.Store, pool *pgxpool.Pool, orchestratorrepo orchestratorrepo.OrchestratoryRepository, matchmakingrepo matchmakingrepo.MatchmakingRepository) Service {
+	return &matchmakingService{RedisRepo: redisRepo, pool: pool, matchmakingrepo: matchmakingrepo, orchestratorrepo: orchestratorrepo}
 }
 
 func (s *matchmakingService) InQue(ctx context.Context, player *models.Player) error {

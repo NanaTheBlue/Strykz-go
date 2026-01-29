@@ -17,6 +17,7 @@ import (
 	"github.com/vultr/govultr/v3"
 
 	authrepo "github.com/nanagoboiler/internal/repository/auth"
+	matchmakingrepo "github.com/nanagoboiler/internal/repository/matchmaking"
 	notificationrepo "github.com/nanagoboiler/internal/repository/notification"
 	orchestratorrepo "github.com/nanagoboiler/internal/repository/orchestrator"
 	redis "github.com/nanagoboiler/internal/repository/redis"
@@ -52,13 +53,14 @@ func main() {
 	redisRepo := redis.NewRedisInstance(redisClient)
 	notificationRepo := notificationrepo.NewNotificationsRepository(pool)
 	orchestratorrepo := orchestratorrepo.NewOrchestratorRepository(pool)
+	matchmakingRepo := matchmakingrepo.NewMatchmakingRepository(pool)
 
 	//Connection Manager
 	hub := notifications.NewHub()
 
 	// Services
 	authService := auth.NewAuthService(authRepo, tokenRepo)
-	matchmakingService := matchmaking.NewMatchmakingService(redisRepo)
+	matchmakingService := matchmaking.NewMatchmakingService(redisRepo, pool, orchestratorrepo, matchmakingRepo)
 	notificationService := notifications.NewnotificationsService(hub, redisRepo, notificationRepo)
 
 	orchestrator := orchestrator.NewOrchestrator(orchestratorrepo, vultrClient)

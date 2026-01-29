@@ -47,6 +47,16 @@ CREATE TABLE IF NOT EXISTS  matches(
     ended_at TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS match_players (
+    match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    steam_id VARCHAR(36) NOT NULL REFERENCES users(steam_id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    joined_at TIMESTAMPTZ,
+    left_at TIMESTAMPTZ,
+
+    PRIMARY KEY (match_id, steam_id)
+);
+
 CREATE UNIQUE INDEX IF NOT EXISTS one_active_match_per_server
 ON matches (server_id)
 WHERE ended_at IS NULL;

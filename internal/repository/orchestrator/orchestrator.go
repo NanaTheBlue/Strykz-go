@@ -134,3 +134,9 @@ func (r *orchestratorRepo) GetServersByRegion(ctx context.Context, region string
 	return servers, rows.Err()
 
 }
+
+func (r *orchestratorRepo) WithTx(tx pgx.Tx) OrchestratoryRepository {
+	return &orchestratorRepo{
+		db: tx,
+	}
+}
