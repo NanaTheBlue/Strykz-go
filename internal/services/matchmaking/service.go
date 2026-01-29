@@ -8,6 +8,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nanagoboiler/internal/repository/redis"
 	"github.com/nanagoboiler/models"
 )
@@ -84,4 +86,22 @@ func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*
 	// obviously this will get more complicated whe we are dealing with 5v5 mode
 	// notify players
 
+}
+
+func WithTx(
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	fn func(tx pgx.Tx) error,
+) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if err := fn(tx); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
