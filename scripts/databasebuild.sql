@@ -88,6 +88,14 @@ CREATE TABLE IF NOT EXISTS party_members (
     PRIMARY KEY (party_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS party_invites (
+    party_id     UUID NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+    inviter_id   UUID NOT NULL REFERENCES users(id),
+    invitee_id   UUID NOT NULL REFERENCES users(id),
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    PRIMARY KEY (party_id, invitee_id)
+);
 
 CREATE TABLE IF NOT EXISTS friends (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

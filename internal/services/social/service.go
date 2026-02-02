@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/nanagoboiler/internal/repository/redis"
@@ -95,6 +94,14 @@ func (s *socialService) AcceptNotification(ctx context.Context, notif models.Not
 	return nil
 }
 
+func (s *socialService) AcceptPartyInvite(ctx context.Context, partyinvitereq models.PartyInviteRequest) error {
+	err := s.socialrepo.AddPartyMember(ctx, partyinvitereq)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *socialService) RejectNotification(ctx context.Context, notifID string) error {
 	err := s.notificationservice.DeleteNotification(ctx, notifID)
 	if err != nil {
@@ -127,26 +134,18 @@ func (s *socialService) PartyInvite(ctx context.Context, partyInviteReq models.P
 
 	// should prob make something to check if they are friends with party leader
 
-	inviteKey := fmt.Sprintf(
-		"party:invite:%s:%s",
-		partyInviteReq.PartyID,
-		partyInviteReq.RecipientID,
-	)
+	blocked, err := s.socialrepo.IsMutuallyBlocked(ctx, partyInviteReq.SenderID, partyInviteReq.RecipientID)
+	if blocked {
+		return errors.New("cannot send invite")
+	}
 
-	ok, err := s.store.AddNX(
-		ctx,
-		inviteKey,
-		partyInviteReq.SenderID,
-		6*time.Second,
-	)
-
+	exists, err := s.socialrepo.AddPartyInvite(ctx, partyInviteReq)
 	if err != nil {
 		return err
 	}
-	if !ok {
-		return ErrInviteAlreadySent
+	if exists {
+		return errors.New("party invite already exists")
 	}
-
 	data, err := json.Marshal(map[string]any{
 		"party_id":  partyInviteReq.PartyID,
 		"sender_id": partyInviteReq.SenderID,

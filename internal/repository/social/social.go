@@ -75,6 +75,73 @@ func (r *socialRepo) AddFriend(ctx context.Context, userID string, friendID stri
 
 	return tx.Commit(ctx)
 }
+func (r *socialRepo) IsMutuallyBlocked(ctx context.Context, userA, userB string) (bool, error) {
+	blocked1, err := r.IsBlocked(ctx, userA, userB)
+	if err != nil {
+		return false, err
+	}
+	blocked2, err := r.IsBlocked(ctx, userB, userA)
+	if err != nil {
+		return false, err
+	}
+	return blocked1 || blocked2, nil
+}
+
+func (r *socialRepo) AddPartyInvite(ctx context.Context, req models.PartyInviteRequest) (bool, error) {
+	cmd, err := r.pool.Exec(ctx, `
+		INSERT INTO party_invites (party_id, inviter_id, invitee_id)
+		VALUES ($1, $2, $3)
+		ON CONFLICT DO NOTHING
+	`, req.PartyID, req.SenderID, req.RecipientID)
+	if err != nil {
+		return false, err
+	}
+
+	return cmd.RowsAffected() == 1, nil
+}
+
+func (r *socialRepo) AddPartyMember(ctx context.Context, req models.PartyInviteRequest) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	cmdTag, err := tx.Exec(ctx, `
+		WITH deleted_invite AS (
+			DELETE FROM party_invites
+			WHERE party_id = $1
+			  AND invitee_id = $2
+			RETURNING party_id
+		)
+		INSERT INTO party_members (party_id, user_id)
+		SELECT party_id, $2
+		FROM deleted_invite;
+	`, req.PartyID, req.RecipientID)
+	if err != nil {
+		return err
+	}
+
+	if cmdTag.RowsAffected() == 0 {
+		return errors.New("party invite not found")
+	}
+
+	return tx.Commit(ctx)
+}
+func (r *socialRepo) IsBlocked(ctx context.Context, userID, otherID string) (bool, error) {
+	var exists bool
+	err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1
+			FROM blocks
+			WHERE blocker_id = $1 AND blocked_id = $2
+		)
+	`, userID, otherID).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
 
 func (r *socialRepo) RemoveFriend(ctx context.Context, userID string, friendID string) error {
 

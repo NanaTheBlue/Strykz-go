@@ -15,4 +15,8 @@ type SocialRepository interface {
 	CreateParty(ctx context.Context, leaderID string) (string, error)
 	CheckPartyLeader(ctx context.Context, partyID string) (string, error)
 	AddReport(ctx context.Context, reportreq models.ReportRequestInput) error
+	AddPartyMember(ctx context.Context, req models.PartyInviteRequest) error
+	IsBlocked(ctx context.Context, userID, otherID string) (bool, error)
+	AddPartyInvite(ctx context.Context, req models.PartyInviteRequest) (bool, error)
+	IsMutuallyBlocked(ctx context.Context, userA, userB string) (bool, error)
 }
