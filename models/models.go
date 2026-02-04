@@ -14,8 +14,9 @@ type User struct {
 }
 
 type Player struct {
-	Player_id string `json:"player_id"`
-	JoinedAt  int64  `json:"joined_at"`
+	Player_id      string `json:"player_id"`
+	Player_steamid string `json:"player_steamid"`
+	JoinedAt       int64  `json:"joined_at"`
 }
 
 type Match struct {

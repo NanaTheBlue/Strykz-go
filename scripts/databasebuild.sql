@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS  matches(
 CREATE TABLE IF NOT EXISTS match_players (
     match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
     steam_id VARCHAR(36) NOT NULL REFERENCES users(steam_id) ON DELETE CASCADE,
-    status TEXT NOT NULL,
+    status TEXT NOT NULL, /* NotConnected, Connected, Banned, Kicked */
     joined_at TIMESTAMPTZ,
     left_at TIMESTAMPTZ,
 
