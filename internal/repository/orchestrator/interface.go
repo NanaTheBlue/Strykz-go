@@ -15,4 +15,5 @@ type OrchestratoryRepository interface {
 	DeleteServer(ctx context.Context, id string) error
 	UpdateServer(ctx context.Context, id string, status models.ServerStatus) error
 	AcquireReadyServer(ctx context.Context, region string) (*models.Gameserver, error)
+	CountReadyServers(ctx context.Context, region string) (int, error)
 }

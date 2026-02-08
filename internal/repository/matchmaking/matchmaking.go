@@ -16,7 +16,7 @@ func NewMatchmakingRepository(db db.DB) MatchmakingRepository {
 	return &matchmakingRepo{db: db}
 }
 
-func (r *matchmakingRepo) CreateMatch(ctx context.Context, serverid string) error {
+func (r *matchmakingRepo) CreateMatch(ctx context.Context, serverid string) (string, error) {
 	var matchID string
 
 	err := r.db.QueryRow(ctx, `
@@ -25,12 +25,12 @@ func (r *matchmakingRepo) CreateMatch(ctx context.Context, serverid string) erro
         RETURNING id
     `, serverid).Scan(&matchID)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return matchID, nil
 }
 
-func (r *matchmakingRepo) InsertPlayers(ctx context.Context, players []models.Player, matchid string) error {
+func (r *matchmakingRepo) InsertPlayers(ctx context.Context, players []*models.Player, matchid string) error {
 	batch := &pgx.Batch{}
 
 	for _, p := range players {

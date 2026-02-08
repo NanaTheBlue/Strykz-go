@@ -70,6 +70,23 @@ func (r *orchestratorRepo) AcquireReadyServer(ctx context.Context, region string
 
 	return &s, nil
 }
+func (r *orchestratorRepo) CountReadyServers(ctx context.Context, region string) (int, error) {
+	var count int
+
+	err := r.db.QueryRow(
+		ctx,
+		`SELECT COUNT(*) 
+		 FROM game_servers 
+		 WHERE region = $1 AND status = 'ready'`,
+		region,
+	).Scan(&count)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
 
 func (r *orchestratorRepo) DeleteServer(ctx context.Context, id string) error {
 	_, err := r.db.Exec(ctx, "DELETE FROM game_servers WHERE id = $1", id)

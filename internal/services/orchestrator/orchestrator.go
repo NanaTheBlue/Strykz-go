@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"log"
 
 	orchestratorrepo "github.com/nanagoboiler/internal/repository/orchestrator"
 	"github.com/nanagoboiler/models"
@@ -57,4 +58,20 @@ func (s *Orchestrator) CreateServer(ctx context.Context, region string) (string,
 	//todo add the Server to the database
 
 	return instance.ID, nil
+}
+
+func (s *Orchestrator) Request(region string) {
+	go func() {
+		ctx := context.Background()
+
+		ready, err := s.orchestratorrepo.CountReadyServers(ctx, region)
+		if err != nil || ready > 0 {
+			return
+		}
+
+		_, err = s.CreateServer(ctx, region)
+		if err != nil {
+			log.Println("failed to create server:", err)
+		}
+	}()
 }

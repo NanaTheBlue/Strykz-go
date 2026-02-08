@@ -56,7 +56,6 @@ func (s *matchmakingService) StartMatchMaking(ctx context.Context, mode string) 
 
 }
 
-// need to write tests for this when i wake up
 func (s *matchmakingService) QueReader(ctx context.Context, mode string) {
 	regions := []string{"us"}
 	modes := []string{"1v1"}
@@ -84,12 +83,20 @@ func (s *matchmakingService) QueReader(ctx context.Context, mode string) {
 
 }
 
-func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*models.Player) {
+func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*models.Player) error {
 
-	// put the match into the database obviously then
-	// assign them a server
-	// obviously this will get more complicated whe we are dealing with 5v5 mode
-	// notify players
+	//Need To Request Capacity Here
+	return WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+
+		repo := matchmakingrepo.NewMatchmakingRepository(tx)
+
+		matchID, err := repo.CreateMatch(ctx, serverid)
+		if err != nil {
+			return err
+		}
+
+		return repo.InsertPlayers(ctx, matchCanidates, matchID)
+	})
 
 }
 
