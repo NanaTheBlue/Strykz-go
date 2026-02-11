@@ -18,14 +18,15 @@ import (
 
 // will prob need to add a matchmaking repo
 type matchmakingService struct {
-	RedisRepo        redis.Store
-	pool             *pgxpool.Pool
-	matchmakingrepo  matchmakingrepo.MatchmakingRepository
-	orchestratorrepo orchestratorrepo.OrchestratoryRepository
+	RedisRepo         redis.Store
+	pool              *pgxpool.Pool
+	matchmakingrepo   matchmakingrepo.MatchmakingRepository
+	orchestratorrepo  orchestratorrepo.OrchestratoryRepository
+	capacityRequester CapacityRequester
 }
 
-func NewMatchmakingService(redisRepo redis.Store, pool *pgxpool.Pool, orchestratorrepo orchestratorrepo.OrchestratoryRepository, matchmakingrepo matchmakingrepo.MatchmakingRepository) Service {
-	return &matchmakingService{RedisRepo: redisRepo, pool: pool, matchmakingrepo: matchmakingrepo, orchestratorrepo: orchestratorrepo}
+func NewMatchmakingService(redisRepo redis.Store, pool *pgxpool.Pool, matchmakingrepo matchmakingrepo.MatchmakingRepository, orchestratorrepo orchestratorrepo.OrchestratoryRepository, capacityRequester CapacityRequester) Service {
+	return &matchmakingService{RedisRepo: redisRepo, pool: pool, matchmakingrepo: matchmakingrepo, orchestratorrepo: orchestratorrepo, capacityRequester: capacityRequester}
 }
 
 func (s *matchmakingService) InQue(ctx context.Context, player *models.Player) error {
@@ -75,7 +76,7 @@ func (s *matchmakingService) QueReader(ctx context.Context, mode string) {
 				continue
 			}
 
-			go s.CreateMatch(ctx, matchCandidates)
+			go s.CreateMatch(ctx, matchCandidates, region)
 
 		}
 
@@ -83,14 +84,21 @@ func (s *matchmakingService) QueReader(ctx context.Context, mode string) {
 
 }
 
-func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*models.Player) error {
+func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*models.Player, region string) error {
 
-	//Need To Request Capacity Here
+	server, err := s.orchestratorrepo.AcquireReadyServer(ctx, region)
+	if server == nil {
+		s.capacityRequester.Request(region)
+		return ErrNoCapacity
+	}
+	if err != nil {
+		fmt.Println(err)
+	}
 	return WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 
 		repo := matchmakingrepo.NewMatchmakingRepository(tx)
 
-		matchID, err := repo.CreateMatch(ctx, serverid)
+		matchID, err := repo.CreateMatch(ctx, server.ID)
 		if err != nil {
 			return err
 		}

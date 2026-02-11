@@ -60,10 +60,9 @@ func main() {
 
 	// Services
 	authService := auth.NewAuthService(authRepo, tokenRepo)
-	matchmakingService := matchmaking.NewMatchmakingService(redisRepo, pool, orchestratorrepo, matchmakingRepo)
-	notificationService := notifications.NewnotificationsService(hub, redisRepo, notificationRepo)
-
 	orchestrator := orchestrator.NewOrchestrator(orchestratorrepo, vultrClient)
+	matchmakingService := matchmaking.NewMatchmakingService(redisRepo, pool, matchmakingRepo, orchestratorrepo, orchestrator)
+	notificationService := notifications.NewnotificationsService(hub, redisRepo, notificationRepo)
 
 	//grpc
 	grpcserver.StartGRPC(orchestrator)

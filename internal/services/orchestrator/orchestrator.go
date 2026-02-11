@@ -72,6 +72,7 @@ func (s *Orchestrator) Request(region string) {
 		_, err = s.CreateServer(ctx, region)
 		if err != nil {
 			log.Println("failed to create server:", err)
+			return
 		}
 	}()
 }
