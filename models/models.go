@@ -17,11 +17,16 @@ type Player struct {
 	Player_id      string `json:"player_id"`
 	Player_steamid string `json:"player_steamid"`
 	JoinedAt       int64  `json:"joined_at"`
+	Status         string `json:"status"`
 }
 
 type Match struct {
-	Id      string   `json:"id"`
-	Players []Player `json:"players"`
+	ID             string     `json:"id"`
+	ServerID       string     `json:"server_id"`
+	StartedAt      time.Time  `json:"started_at"`
+	AcceptDeadline time.Time  `json:"accept_deadline"`
+	Status         string     `json:"status"`
+	EndedAt        *time.Time `json:"ended_at"`
 }
 
 type NotificationType string
@@ -31,6 +36,7 @@ const (
 	PartyInvite       NotificationType = "PartyInvite"
 	BlockNotification NotificationType = "BlockNotification"
 	TestNotification  NotificationType = "Test"
+	MatchFound        NotificationType = "MatchFound"
 )
 
 type Notification struct {

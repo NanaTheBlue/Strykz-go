@@ -2,12 +2,15 @@ package matchmaking
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 
 	"fmt"
 
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	matchmakingrepo "github.com/nanagoboiler/internal/repository/matchmaking"
@@ -23,10 +26,11 @@ type matchmakingService struct {
 	matchmakingrepo   matchmakingrepo.MatchmakingRepository
 	orchestratorrepo  orchestratorrepo.OrchestratoryRepository
 	capacityRequester CapacityRequester
+	notifier          Notifier
 }
 
-func NewMatchmakingService(redisRepo redis.Store, pool *pgxpool.Pool, matchmakingrepo matchmakingrepo.MatchmakingRepository, orchestratorrepo orchestratorrepo.OrchestratoryRepository, capacityRequester CapacityRequester) Service {
-	return &matchmakingService{RedisRepo: redisRepo, pool: pool, matchmakingrepo: matchmakingrepo, orchestratorrepo: orchestratorrepo, capacityRequester: capacityRequester}
+func NewMatchmakingService(redisRepo redis.Store, pool *pgxpool.Pool, matchmakingrepo matchmakingrepo.MatchmakingRepository, orchestratorrepo orchestratorrepo.OrchestratoryRepository, capacityRequester CapacityRequester, notifier Notifier) Service {
+	return &matchmakingService{RedisRepo: redisRepo, pool: pool, matchmakingrepo: matchmakingrepo, orchestratorrepo: orchestratorrepo, capacityRequester: capacityRequester, notifier: notifier}
 }
 
 func (s *matchmakingService) InQue(ctx context.Context, player *models.Player) error {
@@ -86,26 +90,153 @@ func (s *matchmakingService) QueReader(ctx context.Context, mode string) {
 
 func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*models.Player, region string) error {
 
-	server, err := s.orchestratorrepo.AcquireReadyServer(ctx, region)
-	if server == nil {
-		s.capacityRequester.Request(region)
-		return ErrNoCapacity
-	}
-	if err != nil {
-		fmt.Println(err)
-	}
-	return WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	var matchID string
+	deadline := time.Now().Add(30 * time.Second)
 
+	err := WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		repo := matchmakingrepo.NewMatchmakingRepository(tx)
 
-		matchID, err := repo.CreateMatch(ctx, server.ID)
+		id, err := repo.CreateMatch(ctx, deadline)
 		if err != nil {
 			return err
 		}
 
+		matchID = id
+
 		return repo.InsertPlayers(ctx, matchCanidates, matchID)
 	})
 
+	if err != nil {
+		return err
+	}
+
+	for _, p := range matchCanidates {
+
+		payload := map[string]any{
+			"match_id":   matchID,
+			"region":     region,
+			"expires_in": 30,
+		}
+
+		dataBytes, _ := json.Marshal(payload)
+
+		notif := models.Notification{
+			ID:          uuid.NewString(),
+			SenderID:    "system",
+			RecipientID: p.Player_id,
+			Type:        models.NotificationType("MatchFound"),
+			Data:        string(dataBytes),
+			Status:      "unread",
+			CreatedAt:   time.Now(),
+		}
+
+		notifid, err := s.notifier.CreateNoPublishNotification(ctx, notif)
+		if err != nil {
+			log.Printf("failed to notify %s: %v", p.Player_id, err)
+		}
+		if notifid == "" {
+			log.Printf("MATCHMAKINGSERVICE LINE 138: AAAAAAAAAAAAAA")
+		}
+	}
+
+	return nil
+
+}
+
+func (s *matchmakingService) finalizeMatch(ctx context.Context, matchID string, region string) error {
+	server, err := s.orchestratorrepo.AcquireReadyServer(ctx, region)
+	if err != nil {
+		return err
+	}
+	if server == nil {
+		s.capacityRequester.Request(region)
+		return ErrNoCapacity
+	}
+
+	if err := s.matchmakingrepo.AssignServerToMatch(ctx, matchID, server.ID); err != nil {
+		return err
+	}
+
+	if err := s.matchmakingrepo.UpdateMatchStatus(ctx, matchID, "ready"); err != nil {
+		return err
+	}
+
+	players, _ := s.matchmakingrepo.GetMatchPlayers(ctx, matchID)
+	for _, p := range players {
+		payload := map[string]any{
+			"match_id":  matchID,
+			"server_id": server.ID,
+			"type":      "match_ready",
+		}
+		dataBytes, _ := json.Marshal(payload)
+		notif := models.Notification{
+			ID:          uuid.NewString(),
+			SenderID:    "system",
+			RecipientID: p.Player_id,
+			Type:        models.NotificationType("MatchReady"),
+			Data:        string(dataBytes),
+			Status:      "unread",
+			CreatedAt:   time.Now(),
+		}
+		if _, err := s.notifier.CreateNoPublishNotification(ctx, notif); err != nil {
+			log.Printf("failed to notify player %s: %v", p.Player_id, err)
+		}
+	}
+
+	return nil
+}
+
+func (s *matchmakingService) updatePlayerStatus(ctx context.Context, matchID string, player models.Player, status string) error {
+	err := s.matchmakingrepo.UpdatePlayer(ctx, player, matchID, status)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *matchmakingService) ConfirmMatch(ctx context.Context, player models.Player, matchID string, region string) error {
+	var shouldFinalize bool
+
+	err := WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+		repo := matchmakingrepo.NewMatchmakingRepository(tx)
+
+		match, err := repo.GetMatch(ctx, matchID)
+		if err != nil {
+			return err
+		}
+
+		if time.Now().After(match.AcceptDeadline) {
+			return errors.New("accept window expired")
+		}
+
+		if err := repo.UpdatePlayer(ctx, player, matchID, "accepted"); err != nil {
+			return err
+		}
+
+		allAccepted, err := repo.AreAllPlayersAccepted(ctx, matchID)
+		if err != nil {
+			return err
+		}
+
+		if allAccepted {
+			if err := repo.UpdateMatchStatus(ctx, matchID, "accepted"); err != nil {
+				return err
+			}
+
+			shouldFinalize = true
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if shouldFinalize {
+		return s.finalizeMatch(ctx, matchID, region)
+	}
+	// should improve this just prototype rn
+	return nil
 }
 
 func WithTx(

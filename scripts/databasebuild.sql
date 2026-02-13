@@ -42,15 +42,17 @@ CREATE TABLE IF NOT EXISTS game_servers(
 
 CREATE TABLE IF NOT EXISTS  matches(
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    server_id UUID NOT NULL REFERENCES game_servers(id),
+    server_id UUID  REFERENCES game_servers(id),
     started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    accept_deadline  TIMESTAMPTZ NOT NULL,
+    status TEXT,
     ended_at TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS match_players (
     match_id UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
     steam_id VARCHAR(36) NOT NULL REFERENCES users(steam_id) ON DELETE CASCADE,
-    status TEXT NOT NULL, /* NotConnected, Connected, Banned, Kicked */
+    status TEXT NOT NULL, /* Accepted, NotConnected, Connected, Banned, Kicked */
     joined_at TIMESTAMPTZ,
     left_at TIMESTAMPTZ,
 
