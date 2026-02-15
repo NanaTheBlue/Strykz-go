@@ -38,6 +38,14 @@ func (s *Orchestrator) SelectServer(ctx context.Context, region string) (*models
 	return Gameserver, nil
 }
 
+func (s *Orchestrator) UpdateServerStatus(ctx context.Context, serverID string, status models.ServerStatus) error {
+	err := s.orchestratorrepo.UpdateServer(ctx, serverID, status)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *Orchestrator) CreateServer(ctx context.Context, region string) (string, error) {
 	// todo make this more modular rn its just in testing phase so it dont matter
 

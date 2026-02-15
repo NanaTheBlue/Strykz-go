@@ -28,7 +28,10 @@ func (r *orchestratorRepo) UpdateHeartBeat(ctx context.Context, serverid string)
 }
 
 func (r *orchestratorRepo) UpdateServer(ctx context.Context, id string, status models.ServerStatus) error {
-
+	_, err := r.db.Exec(ctx, "UPDATE game_servers SET status = $1 WHERE id = $2 ", status, id)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

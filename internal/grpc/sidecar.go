@@ -6,6 +6,7 @@ import (
 	"time"
 
 	pb "github.com/nanagoboiler/gen"
+	"github.com/nanagoboiler/models"
 )
 
 func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
@@ -31,6 +32,15 @@ func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
 			log.Printf("heartbeat from %s", serverID)
 		case *pb.SidecarEvent_ServerStarted:
 			log.Println("Bing Bong")
+			serverID := evt.GetServerId()
+			ctx, cancel := context.WithTimeout(stream.Context(), 1000*time.Millisecond)
+			defer cancel()
+			err := s.orchestrator.UpdateServerStatus(ctx, serverID, models.ServerReady)
+			if err != nil {
+				log.Println(err)
+			}
+		case *pb.SidecarEvent_ServerStopped:
+			log.Println("Here We Would Delete The Server")
 
 		default:
 			log.Printf("unhandled event type %T from %s", payload, evt.GetServerId())

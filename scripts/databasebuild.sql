@@ -1,5 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+
 CREATE TABLE IF NOT EXISTS users(
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     username VARCHAR(32) UNIQUE NOT NULL,
@@ -36,7 +37,7 @@ CREATE TABLE IF NOT EXISTS game_servers(
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     region TEXT NOT NULL,
     status TEXT NOT NULL, /* Creating, Ready, Busy  */
-    last_heartbeat TIMESTAMPTZ
+    last_heartbeat TIMESTAMPTZ,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
