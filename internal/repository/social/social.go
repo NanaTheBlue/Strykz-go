@@ -34,6 +34,20 @@ func (r *socialRepo) AddReport(ctx context.Context, reportreq models.ReportReque
 	return tx.Commit(ctx)
 }
 
+func (r *socialRepo) IsFriends(ctx context.Context, friend1ID string, friend2ID string) (bool, error) {
+	var exists bool
+	a, b := normalizePair(friend1ID, friend2ID)
+	err := r.pool.QueryRow(ctx, `SELECT EXISTS (
+			SELECT 1
+			FROM friends
+			WHERE user_id = $1 AND friend_id = $2
+		)`, a, b).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 func (r *socialRepo) AddFriend(ctx context.Context, userID string, friendID string) error {
 	// check if theres a friend request if not return
 

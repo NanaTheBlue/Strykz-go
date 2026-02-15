@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"errors"
 	"log"
 
 	orchestratorrepo "github.com/nanagoboiler/internal/repository/orchestrator"
@@ -39,6 +40,7 @@ func (s *Orchestrator) SelectServer(ctx context.Context, region string) (*models
 
 func (s *Orchestrator) CreateServer(ctx context.Context, region string) (string, error) {
 	// todo make this more modular rn its just in testing phase so it dont matter
+
 	enableIPv6 := false
 	instanceOptions := &govultr.InstanceCreateReq{
 		Label:      "awesome-go-app",
@@ -54,8 +56,20 @@ func (s *Orchestrator) CreateServer(ctx context.Context, region string) (string,
 	if err != nil {
 		return "", err
 	}
+	if instance.ID == "" {
+		return "", errors.New("Instance ID Is Blank")
+	}
 
-	//todo add the Server to the database
+	server := models.Gameserver{
+		ID:     instance.ID,
+		Region: region,
+		Status: "Creating",
+	}
+
+	err = s.orchestratorrepo.InsertServer(ctx, server)
+	if err != nil {
+		return "", err
+	}
 
 	return instance.ID, nil
 }

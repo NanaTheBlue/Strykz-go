@@ -35,8 +35,8 @@ CREATE TABLE IF NOT EXISTS bans(
 CREATE TABLE IF NOT EXISTS game_servers(
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     region TEXT NOT NULL,
-    status TEXT NOT NULL,
-    last_heartbeat TIMESTAMPTZ NOT NULL,
+    status TEXT NOT NULL, /* Creating, Ready, Busy  */
+    last_heartbeat TIMESTAMPTZ
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

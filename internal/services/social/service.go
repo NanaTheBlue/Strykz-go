@@ -138,6 +138,18 @@ func (s *socialService) PartyInvite(ctx context.Context, partyInviteReq models.P
 	if blocked {
 		return errors.New("cannot send invite")
 	}
+	if err != nil {
+		return err
+	}
+
+	friends, err := s.socialrepo.IsFriends(ctx, partyInviteReq.SenderID, partyInviteReq.RecipientID)
+	if err != nil {
+		return err
+	}
+
+	if !friends {
+		return errors.New("cannot send party invite to user you not friends with")
+	}
 
 	exists, err := s.socialrepo.AddPartyInvite(ctx, partyInviteReq)
 	if err != nil {
