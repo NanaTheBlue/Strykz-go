@@ -12,6 +12,28 @@ import (
 func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
 	log.Println("sidecar connected")
 
+	firstEvt, err := stream.Recv()
+	if err != nil {
+		log.Printf("failed to receive first event: %v", err)
+		return err
+	}
+
+	serverID := firstEvt.GetServerId()
+
+	s.orchestrator.RegisterStream(serverID, stream)
+	defer s.orchestrator.UnregisterStream(serverID)
+
+	if payload, ok := firstEvt.Payload.(*pb.SidecarEvent_ServerStarted); ok {
+		ctx, cancel := context.WithTimeout(stream.Context(), 1000*time.Millisecond)
+		defer cancel()
+		if err := s.orchestrator.UpdateServerStatus(ctx, serverID, models.ServerReady); err != nil {
+			log.Println(err)
+		}
+		log.Printf("server %s started: hostname=%s", serverID, payload.ServerStarted.Hostname)
+	} else {
+		log.Printf("expected ServerStarted as first event, got %T", firstEvt.Payload)
+	}
+
 	for {
 		evt, err := stream.Recv()
 		if err != nil {
@@ -21,7 +43,7 @@ func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
 
 		switch payload := evt.Payload.(type) {
 		case *pb.SidecarEvent_Heartbeat:
-			serverID := evt.GetServerId()
+
 			ctx, cancel := context.WithTimeout(stream.Context(), 500*time.Millisecond)
 			defer cancel()
 
@@ -32,7 +54,7 @@ func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
 			log.Printf("heartbeat from %s", serverID)
 		case *pb.SidecarEvent_ServerStarted:
 			log.Println("Bing Bong")
-			serverID := evt.GetServerId()
+
 			ctx, cancel := context.WithTimeout(stream.Context(), 1000*time.Millisecond)
 			defer cancel()
 			err := s.orchestrator.UpdateServerStatus(ctx, serverID, models.ServerReady)

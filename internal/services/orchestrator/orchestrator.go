@@ -3,8 +3,11 @@ package orchestrator
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
+	"sync"
 
+	pb "github.com/nanagoboiler/gen"
 	orchestratorrepo "github.com/nanagoboiler/internal/repository/orchestrator"
 	"github.com/nanagoboiler/models"
 	"github.com/vultr/govultr/v3"
@@ -13,13 +16,58 @@ import (
 type Orchestrator struct {
 	orchestratorrepo orchestratorrepo.OrchestratoryRepository
 	vultrclient      *govultr.Client
+	streams          map[string]pb.SidecarService_ConnectServer
+	mu               sync.RWMutex
 }
 
 func NewOrchestrator(orchestratorrepo orchestratorrepo.OrchestratoryRepository, vultrclient *govultr.Client) Service {
 	return &Orchestrator{
 		orchestratorrepo: orchestratorrepo,
 		vultrclient:      vultrclient,
+		streams:          make(map[string]pb.SidecarService_ConnectServer),
 	}
+}
+
+func (s *Orchestrator) RegisterStream(serverID string, stream pb.SidecarService_ConnectServer) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.streams[serverID] = stream
+	log.Printf("registered stream for server %s", serverID)
+}
+
+func (s *Orchestrator) UnregisterStream(serverID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.streams, serverID)
+	log.Printf("unregistered stream for server %s", serverID)
+}
+
+func (s *Orchestrator) GetStream(serverID string) pb.SidecarService_ConnectServer {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.streams[serverID]
+}
+func (s *Orchestrator) ReloadWhitelist(serverID string, steamIDs []string) error {
+	stream := s.GetStream(serverID)
+	if stream == nil {
+		return fmt.Errorf("no stream for server %s", serverID)
+	}
+
+	cmd := &pb.BackendCommand{
+		Payload: &pb.BackendCommand_ReloadWhitelist{
+			ReloadWhitelist: &pb.ReloadWhitelist{
+				SteamIds: steamIDs,
+			},
+		},
+	}
+
+	if err := stream.Send(cmd); err != nil {
+		log.Printf("failed to send reload whitelist to server %s: %v", serverID, err)
+		return err
+	}
+
+	log.Printf("reload whitelist sent to server %s", serverID)
+	return nil
 }
 
 func (s *Orchestrator) UpdateHeartbeat(ctx context.Context, serverID string) error {
