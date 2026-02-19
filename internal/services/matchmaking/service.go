@@ -80,9 +80,9 @@ func (s *matchmakingService) QueReader(ctx context.Context, mode string) {
 			continue
 		}
 
-		if err := s.CreateMatch(ctx, matchCandidates, region); err != nil {
-			log.Printf("CreateMatch failed: %v", err)
-		}
+		go func() {
+			s.CreateMatch(ctx, matchCandidates, region)
+		}()
 
 	}
 
@@ -96,14 +96,13 @@ func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*
 	err := WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		repo := matchmakingrepo.NewMatchmakingRepository(tx)
 
-		id, err := repo.CreateMatch(ctx, deadline)
+		id, err := repo.CreateMatch(ctx, deadline, region)
 		if err != nil {
 			log.Printf("ERROR: repo.CreateMatch error: %v", err)
 			return err
 		}
 
 		matchID = id
-		log.Printf("ERROR: Match created with ID: %s", matchID)
 
 		err = repo.InsertPlayers(ctx, matchCanidates, matchID)
 		if err != nil {
@@ -143,12 +142,51 @@ func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*
 			log.Printf("failed to notify %s: %v", p.Player_id, err)
 		}
 		if notifid == "" {
-			log.Printf("MATCHMAKINGSERVICE LINE 138: AAAAAAAAAAAAAA")
+			log.Printf("ERROR: notifid NULL MatchMaking Service")
 		}
 	}
 
 	return nil
 
+}
+
+func (s *matchmakingService) ReconcileAwaitingMatches(ctx context.Context) {
+	matches, err := s.matchmakingrepo.GetMatchesByStatus(ctx, models.AwaitingServer)
+	if err != nil {
+		log.Printf("ERROR: GetMatchesByStatus Error : %v", err)
+	}
+
+	for _, match := range matches {
+		server, _ := s.orchestratorrepo.AcquireReadyServer(ctx, match.Region)
+		if server != nil {
+			err := s.matchmakingrepo.AssignServerToMatch(ctx, match.ID, server.ID)
+
+			if err != nil {
+				log.Printf("ERROR: AssignServerToMatch Error : %v", err)
+			}
+		} else {
+			// continue because we should have already requested capacity no need to double request it
+			continue
+		}
+	}
+}
+
+func (s *matchmakingService) StartReconciler(ctx context.Context) {
+	// This Specifically We will make event driven with SQS + Lambda
+
+	// Should look at other things to make event driven prob the whole orchestrator
+
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			s.ReconcileAwaitingMatches(ctx)
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func (s *matchmakingService) finalizeMatch(ctx context.Context, matchID string, region string) error {
@@ -158,7 +196,11 @@ func (s *matchmakingService) finalizeMatch(ctx context.Context, matchID string, 
 	}
 	if server == nil {
 		s.capacityRequester.Request(region)
-		return ErrNoCapacity
+		if err := s.matchmakingrepo.UpdateMatchStatus(ctx, matchID, models.AwaitingServer); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	if err := s.matchmakingrepo.AssignServerToMatch(ctx, matchID, server.ID); err != nil {
@@ -213,7 +255,7 @@ func (s *matchmakingService) ConfirmMatch(ctx context.Context, player models.Pla
 			return err
 		}
 
-		if time.Now().After(match.AcceptDeadline) {
+		if time.Now().After(*match.AcceptDeadline) {
 			return errors.New("accept window expired")
 		}
 

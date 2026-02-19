@@ -17,11 +17,11 @@ func NewMatchmakingRepository(db db.DB) MatchmakingRepository {
 	return &matchmakingRepo{db: db}
 }
 
-func (r *matchmakingRepo) CreateMatch(ctx context.Context, deadline time.Time) (string, error) {
+func (r *matchmakingRepo) CreateMatch(ctx context.Context, deadline time.Time, region string) (string, error) {
 	var matchID string
 
 	err := r.db.QueryRow(ctx, `
-        INSERT INTO matches (accept_deadline)
+        INSERT INTO matches (accept_deadline,region)
         VALUES ($1)
         RETURNING id
     `, deadline).Scan(&matchID)
@@ -74,6 +74,50 @@ func (r *matchmakingRepo) GetMatchPlayers(ctx context.Context, matchID string) (
 
 	return players, nil
 }
+func (r *matchmakingRepo) GetMatchesByStatus(ctx context.Context, status models.MatchStatus) ([]models.Match, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT id, server_id, started_at, accept_deadline,status,ended_at,region
+		FROM matches
+		WHERE status = $1
+	`, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var matches []models.Match
+
+	for rows.Next() {
+		var id string
+		var server_id string
+		var started_at *time.Time
+		var accept_deadline *time.Time
+		var status string //change this later in a refactor
+		var ended_at *time.Time
+		var region string
+
+		if err := rows.Scan(&id, &server_id, &started_at, &accept_deadline, &status, &ended_at, &region); err != nil {
+			return nil, err
+		}
+
+		match := models.Match{
+			ID:             id,
+			ServerID:       server_id,
+			StartedAt:      started_at,
+			AcceptDeadline: accept_deadline,
+			Status:         status,
+		}
+
+		matches = append(matches, match)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return matches, nil
+
+}
 
 func (r *matchmakingRepo) GetMatch(ctx context.Context, matchID string) (models.Match, error) {
 	var match models.Match
@@ -117,7 +161,7 @@ func (r *matchmakingRepo) AssignServerToMatch(ctx context.Context, matchID strin
 	return nil
 }
 
-func (r *matchmakingRepo) UpdateMatchStatus(ctx context.Context, matchID string, status string) error {
+func (r *matchmakingRepo) UpdateMatchStatus(ctx context.Context, matchID string, status models.MatchStatus) error {
 	_, err := r.db.Exec(ctx, "UPDATE matches SET status = $2 WHERE id = $1 ", matchID, status)
 	if err != nil {
 		return err

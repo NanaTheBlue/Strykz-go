@@ -11,6 +11,12 @@ const (
 	ServerDead     ServerStatus = "DEAD"
 )
 
+type MatchStatus string
+
+const (
+	AwaitingServer MatchStatus = "Awaiting_Server"
+)
+
 type Gameserver struct {
 	ID            string
 	Region        string

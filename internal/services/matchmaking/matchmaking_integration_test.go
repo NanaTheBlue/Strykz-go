@@ -161,3 +161,7 @@ FOUND:
 		_, _ = testPool.Exec(ctx, `DELETE FROM matches WHERE id=$1`, matchID)
 	})
 }
+
+func TestMatchmakingFinalizeMatch(t *testing.T) {
+
+}

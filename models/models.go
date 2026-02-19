@@ -23,10 +23,11 @@ type Player struct {
 type Match struct {
 	ID             string     `json:"id"`
 	ServerID       string     `json:"server_id"`
-	StartedAt      time.Time  `json:"started_at"`
-	AcceptDeadline time.Time  `json:"accept_deadline"`
+	StartedAt      *time.Time `json:"started_at"`
+	AcceptDeadline *time.Time `json:"accept_deadline"`
 	Status         string     `json:"status"`
 	EndedAt        *time.Time `json:"ended_at"`
+	Region         string     `json:"region"`
 }
 
 type NotificationType string
