@@ -465,6 +465,7 @@ func (x *Shutdown) GetReason() string {
 
 type ReloadWhitelist struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	SteamIds      []string               `protobuf:"bytes,1,rep,name=steam_ids,json=steamIds,proto3" json:"steam_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -499,6 +500,13 @@ func (*ReloadWhitelist) Descriptor() ([]byte, []int) {
 	return file_proto_sidecar_proto_rawDescGZIP(), []int{7}
 }
 
+func (x *ReloadWhitelist) GetSteamIds() []string {
+	if x != nil {
+		return x.SteamIds
+	}
+	return nil
+}
+
 var File_proto_sidecar_proto protoreflect.FileDescriptor
 
 const file_proto_sidecar_proto_rawDesc = "" +
@@ -528,8 +536,9 @@ const file_proto_sidecar_proto_rawDesc = "" +
 	"\x10reload_whitelist\x18\x02 \x01(\v2\x1b.sidecar.v1.ReloadWhitelistH\x00R\x0freloadWhitelistB\t\n" +
 	"\apayload\"\"\n" +
 	"\bShutdown\x12\x16\n" +
-	"\x06reason\x18\x01 \x01(\tR\x06reason\"\x11\n" +
-	"\x0fReloadWhitelist2U\n" +
+	"\x06reason\x18\x01 \x01(\tR\x06reason\".\n" +
+	"\x0fReloadWhitelist\x12\x1b\n" +
+	"\tsteam_ids\x18\x01 \x03(\tR\bsteamIds2U\n" +
 	"\x0eSidecarService\x12C\n" +
 	"\aConnect\x12\x18.sidecar.v1.SidecarEvent\x1a\x1a.sidecar.v1.BackendCommand(\x010\x01B&Z$nana/sidecar/gen/sidecarpb;sidecarpbb\x06proto3"
 

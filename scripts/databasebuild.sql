@@ -1,12 +1,14 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 
+/*
 INSERT INTO game_servers (id, region, status)
 VALUES (
     '68b434d1-e394-41bb-9e00-85b50432f1b0',
     'us',
     'Creating'
 );
+*/
 
 CREATE TABLE IF NOT EXISTS users(
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

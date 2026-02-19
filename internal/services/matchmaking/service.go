@@ -50,6 +50,8 @@ func (s *matchmakingService) StartMatchMaking(ctx context.Context, mode string) 
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
+	s.QueReader(ctx, mode)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -63,25 +65,23 @@ func (s *matchmakingService) StartMatchMaking(ctx context.Context, mode string) 
 
 func (s *matchmakingService) QueReader(ctx context.Context, mode string) {
 	regions := []string{"us"}
-	modes := []string{"1v1"}
 
-	for _, mode := range modes {
-		for _, region := range regions {
-			queueKey := fmt.Sprintf("queue:%s:%s", mode, region)
+	for _, region := range regions {
+		queueKey := fmt.Sprintf("queue:%s:%s", mode, region)
 
-			matchCandidates, err := s.RedisRepo.DeQue(ctx, queueKey, region, 2)
-			if err != nil {
-				log.Printf("Error reading from queue %s: %v", queueKey, err)
-				continue
-			}
+		matchCandidates, err := s.RedisRepo.DeQue(ctx, mode, region, 2)
+		if err != nil {
+			log.Printf("Error reading from queue %s: %v", queueKey, err)
+			continue
+		}
 
-			if len(matchCandidates) < 2 {
+		if len(matchCandidates) < 2 {
 
-				continue
-			}
+			continue
+		}
 
-			go s.CreateMatch(ctx, matchCandidates, region)
-
+		if err := s.CreateMatch(ctx, matchCandidates, region); err != nil {
+			log.Printf("CreateMatch failed: %v", err)
 		}
 
 	}
@@ -98,15 +98,23 @@ func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*
 
 		id, err := repo.CreateMatch(ctx, deadline)
 		if err != nil {
+			log.Printf("ERROR: repo.CreateMatch error: %v", err)
 			return err
 		}
 
 		matchID = id
+		log.Printf("ERROR: Match created with ID: %s", matchID)
 
-		return repo.InsertPlayers(ctx, matchCanidates, matchID)
+		err = repo.InsertPlayers(ctx, matchCanidates, matchID)
+		if err != nil {
+			log.Printf("ERROR: repo.InsertPlayers error: %v", err)
+			return err
+		}
+		return nil
 	})
 
 	if err != nil {
+		log.Printf("ERROR: Transaction result error: %v", err)
 		return err
 	}
 
