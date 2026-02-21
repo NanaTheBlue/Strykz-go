@@ -27,10 +27,11 @@ type matchmakingService struct {
 	orchestratorrepo  orchestratorrepo.OrchestratoryRepository
 	capacityRequester CapacityRequester
 	notifier          Notifier
+	serverSpeaker     ServerSpeaker
 }
 
-func NewMatchmakingService(redisRepo redis.Store, pool *pgxpool.Pool, matchmakingrepo matchmakingrepo.MatchmakingRepository, orchestratorrepo orchestratorrepo.OrchestratoryRepository, capacityRequester CapacityRequester, notifier Notifier) Service {
-	return &matchmakingService{RedisRepo: redisRepo, pool: pool, matchmakingrepo: matchmakingrepo, orchestratorrepo: orchestratorrepo, capacityRequester: capacityRequester, notifier: notifier}
+func NewMatchmakingService(redisRepo redis.Store, pool *pgxpool.Pool, matchmakingrepo matchmakingrepo.MatchmakingRepository, orchestratorrepo orchestratorrepo.OrchestratoryRepository, capacityRequester CapacityRequester, notifier Notifier, serverSpeaker ServerSpeaker) Service {
+	return &matchmakingService{RedisRepo: redisRepo, pool: pool, matchmakingrepo: matchmakingrepo, orchestratorrepo: orchestratorrepo, capacityRequester: capacityRequester, notifier: notifier, serverSpeaker: serverSpeaker}
 }
 
 func (s *matchmakingService) InQue(ctx context.Context, player *models.Player) error {
@@ -212,6 +213,16 @@ func (s *matchmakingService) finalizeMatch(ctx context.Context, matchID string, 
 	}
 
 	players, _ := s.matchmakingrepo.GetMatchPlayers(ctx, matchID)
+
+	steamIDs := make([]string, len(players))
+	for i, p := range players {
+		steamIDs[i] = p.Player_steamid
+	}
+
+	if err := s.serverSpeaker.ReloadWhitelist(server.ID, steamIDs); err != nil {
+		return err
+	}
+
 	for _, p := range players {
 		payload := map[string]any{
 			"match_id":  matchID,
@@ -236,6 +247,7 @@ func (s *matchmakingService) finalizeMatch(ctx context.Context, matchID string, 
 	return nil
 }
 
+// as players join update status if kicked update status
 func (s *matchmakingService) updatePlayerStatus(ctx context.Context, matchID string, player models.Player, status string) error {
 	err := s.matchmakingrepo.UpdatePlayer(ctx, player, matchID, status)
 	if err != nil {

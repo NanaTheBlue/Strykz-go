@@ -29,9 +29,13 @@ type fakeCapacityRequester struct{}
 func (f *fakeCapacityRequester) Request(region string) {}
 
 type fakeNotifier struct{}
+type fakeSpeaker struct{}
 
 func (f *fakeNotifier) CreateNoPublishNotification(ctx context.Context, notification models.Notification) (string, error) {
 	return "test-id", nil
+}
+func (f *fakeSpeaker) ReloadWhitelist(serverID string, steamIDs []string) error {
+	return nil
 }
 
 func TestMain(m *testing.M) {
@@ -62,6 +66,7 @@ func TestMain(m *testing.M) {
 
 	fakeCapacity := &fakeCapacityRequester{}
 	fakeNotif := &fakeNotifier{}
+	fakeSpeaker := &fakeSpeaker{}
 
 	testService = NewMatchmakingService(
 		testRedis,
@@ -70,6 +75,7 @@ func TestMain(m *testing.M) {
 		orchRepo,
 		fakeCapacity,
 		fakeNotif,
+		fakeSpeaker,
 	)
 
 	code := m.Run()

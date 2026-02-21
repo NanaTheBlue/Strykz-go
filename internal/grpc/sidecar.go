@@ -63,7 +63,6 @@ func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
 			}
 		case *pb.SidecarEvent_ServerStopped:
 			log.Println("Here We Would Delete The Server")
-
 		default:
 			log.Printf("unhandled event type %T from %s", payload, evt.GetServerId())
 		}

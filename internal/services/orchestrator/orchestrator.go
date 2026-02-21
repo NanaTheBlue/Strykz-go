@@ -48,6 +48,7 @@ func (s *Orchestrator) GetStream(serverID string) pb.SidecarService_ConnectServe
 	return s.streams[serverID]
 }
 func (s *Orchestrator) ReloadWhitelist(serverID string, steamIDs []string) error {
+	// the game server would clear its whitelist after the match
 	stream := s.GetStream(serverID)
 	if stream == nil {
 		return fmt.Errorf("no stream for server %s", serverID)

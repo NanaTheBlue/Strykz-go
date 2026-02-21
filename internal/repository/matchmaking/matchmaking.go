@@ -106,6 +106,7 @@ func (r *matchmakingRepo) GetMatchesByStatus(ctx context.Context, status models.
 			StartedAt:      started_at,
 			AcceptDeadline: accept_deadline,
 			Status:         status,
+			Region:         region,
 		}
 
 		matches = append(matches, match)
