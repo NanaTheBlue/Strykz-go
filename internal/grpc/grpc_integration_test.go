@@ -87,7 +87,7 @@ func TestReloadWhitelistIntegration(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 	}
 
-	err := orch.ReloadWhitelist(serverID, []string{"123"})
+	err := orch.ReloadWhitelist(serverID, []string{"76561198102759822"})
 
 	require.NoError(t, err)
 
