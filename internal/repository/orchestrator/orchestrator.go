@@ -36,7 +36,7 @@ func (r *orchestratorRepo) UpdateServer(ctx context.Context, id string, status m
 }
 
 func (r *orchestratorRepo) InsertServer(ctx context.Context, server models.Gameserver) error {
-	_, err := r.db.Exec(ctx, "INSERT INTO game_servers (id, region, status) VALUES ($1, $2, $3)", server.ID, server.Region, server.Status)
+	_, err := r.db.Exec(ctx, "INSERT INTO game_servers (id, region, status,ip) VALUES ($1, $2, $3,$4)", server.ID, server.Region, server.Status, server.IP)
 	if err != nil {
 		return err
 	}

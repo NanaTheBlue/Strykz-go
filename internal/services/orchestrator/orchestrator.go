@@ -64,6 +64,7 @@ func (s *Orchestrator) ReloadWhitelist(serverID string, steamIDs []string) error
 
 	if err := stream.Send(cmd); err != nil {
 		log.Printf("failed to send reload whitelist to server %s: %v", serverID, err)
+		s.UnregisterStream(serverID)
 		return err
 	}
 
@@ -119,6 +120,7 @@ func (s *Orchestrator) CreateServer(ctx context.Context, region string) (string,
 
 	server := models.Gameserver{
 		ID:     instance.ID,
+		IP:     instance.MainIP,
 		Region: region,
 		Status: "Creating",
 	}

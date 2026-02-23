@@ -15,11 +15,17 @@ type SidecarServer struct {
 	orchestrator orchestrator.Service
 }
 
+func NewSidecarServer(orchestrator orchestrator.Service) *SidecarServer {
+	return &SidecarServer{
+		orchestrator: orchestrator,
+	}
+}
+
 func StartGRPC(
 	orchestrator orchestrator.Service,
-
+	addr string,
 ) {
-	lis, err := net.Listen("tcp", ":6767")
+	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("listen failed: %v", err)
 	}
@@ -28,9 +34,7 @@ func StartGRPC(
 
 	pb.RegisterSidecarServiceServer(
 		server,
-		&SidecarServer{
-			orchestrator: orchestrator,
-		},
+		NewSidecarServer(orchestrator),
 	)
 
 	go func() {

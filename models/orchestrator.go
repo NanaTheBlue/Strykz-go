@@ -19,6 +19,7 @@ const (
 
 type Gameserver struct {
 	ID            string
+	IP            string
 	Region        string
 	Status        ServerStatus
 	LastHeartbeat time.Time

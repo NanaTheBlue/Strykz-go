@@ -65,7 +65,7 @@ func main() {
 	matchmakingService := matchmaking.NewMatchmakingService(redisRepo, pool, matchmakingRepo, orchestratorrepo, orchestrator, notificationService, orchestrator)
 
 	//grpc
-	grpcserver.StartGRPC(orchestrator)
+	grpcserver.StartGRPC(orchestrator, ":6767")
 
 	//logger
 	//logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
