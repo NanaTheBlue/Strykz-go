@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"time"
 
 	"fmt"
 
@@ -32,17 +33,22 @@ func ensureDatabase(ctx context.Context, pool *pgxpool.Pool) error {
 }
 
 func NewPostgresPool(ctx context.Context, postgresURL string) (*pgxpool.Pool, error) {
-
 	pool, err := pgxpool.New(ctx, postgresURL)
 	if err != nil {
 		return nil, fmt.Errorf("create pool: %w", err)
 	}
 
-	if err := pool.Ping(ctx); err != nil {
-		pool.Close()
+	err = retryWithBackoff(ctx, 5, 1*time.Second, func() error {
+		return pool.Ping(ctx)
+	})
+
+	if err != nil {
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
-	err = ensureDatabase(ctx, pool)
+
+	err = retryWithBackoff(ctx, 5, 1*time.Second, func() error {
+		return ensureDatabase(ctx, pool)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("ensure database: %w", err)
 	}
@@ -60,7 +66,11 @@ func NewRedisInstance(ctx context.Context, address string, password string) (*re
 		Protocol: 2, // Connection protocol
 	})
 	//ping the redis client to ensure it works properly
-	if err := client.Ping(ctx).Err(); err != nil {
+
+	err := retryWithBackoff(ctx, 5, 1*time.Second, func() error {
+		return client.Ping(ctx).Err()
+	})
+	if err != nil {
 		return nil, err
 	}
 

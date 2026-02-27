@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"os"
 
@@ -40,11 +41,11 @@ func main() {
 
 	pool, err := bootstrap.NewPostgresPool(ctx, postgresURL)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to initialize Postgres: %v", err)
 	}
 	redisClient, err := bootstrap.NewRedisInstance(ctx, address, password)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to initialize Redis: %v", err)
 	}
 
 	// Repositories
