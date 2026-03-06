@@ -55,7 +55,7 @@ The backend is designed with clear internal layering (API, services, repositorie
 - **Cache / PubSub:** Redis
 - **Queue System:** Redis
 - **Real-Time:** WebSockets
-- **Frontend Integration:** Designed to be consumed by a Next.js BFF / frontend
+- **Frontend Integration:** Designed to be consumed by a react frontend
 
 ---
 
