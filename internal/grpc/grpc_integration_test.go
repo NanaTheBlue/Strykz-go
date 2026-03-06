@@ -1,3 +1,5 @@
+//go:build integration
+
 package grpcserver_test
 
 import (
