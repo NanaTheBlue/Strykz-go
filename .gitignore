@@ -2,4 +2,6 @@
 
 kubeconfig.yaml
 docker-compose.yml
-main.tf
+.tfstate
+.tfstate.backup
+.tfplan

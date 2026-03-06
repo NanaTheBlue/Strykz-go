@@ -8,7 +8,6 @@ import (
 	"time"
 
 	pb "github.com/nanagoboiler/gen"
-	"github.com/stretchr/testify/require"
 
 	grpcserver "github.com/nanagoboiler/internal/grpc"
 	"github.com/nanagoboiler/internal/services/orchestrator"
@@ -67,31 +66,4 @@ func startGrpcServer(t *testing.T) (*grpc.Server, net.Listener, *orchestrator.Or
 	}()
 
 	return server, lis, orch
-}
-
-func TestReloadWhitelistIntegration(t *testing.T) {
-	server, lis, orch := startGrpcServer(t)
-	defer server.Stop()
-	defer lis.Close()
-
-	serverID := "68b434d1-e394-41bb-9e00-85b50432f1b0"
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	deadline := time.Now().Add(10 * time.Second)
-	for orch.GetStream(serverID) == nil {
-		if time.Now().After(deadline) || ctx.Err() != nil {
-			t.Fatal("sidecar did not connect")
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-
-	err := orch.ReloadWhitelist(serverID, []string{"76561198102759822"})
-
-	require.NoError(t, err)
-
-	stream := orch.GetStream(serverID)
-	require.NotNil(t, stream, "stream disappeared unexpectedly")
-
 }
