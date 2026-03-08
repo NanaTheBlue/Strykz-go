@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -18,9 +19,10 @@ type socialService struct {
 	notificationservice notifications.Service
 	socialrepo          socialrepo.SocialRepository
 	store               redis.Store
+	pool                *pgxpool.Pool
 }
 
-func NewsocialService(notificationservice notifications.Service, socialrepo socialrepo.SocialRepository, store redis.Store) Service {
+func NewsocialService(notificationservice notifications.Service, pool *pgxpool.Pool, socialrepo socialrepo.SocialRepository, store redis.Store) Service {
 	return &socialService{
 		notificationservice: notificationservice,
 		socialrepo:          socialrepo,
@@ -32,7 +34,7 @@ func (s *socialService) ReportUser(ctx context.Context, reportreq models.ReportR
 
 	err := s.socialrepo.AddReport(ctx, reportreq)
 	if err != nil {
-
+		return fmt.Errorf("failed to add report: %w", err)
 	}
 
 	return nil
@@ -62,8 +64,6 @@ func (s *socialService) SendFriendRequest(ctx context.Context, friendreq models.
 }
 
 func (s *socialService) BlockUser(ctx context.Context, req models.BlockRequest) error {
-
-	// idk if we should have validation right here
 	if req.BlockerID == req.BlockedID {
 		return errors.New("cannot block yourself")
 	}
@@ -124,43 +124,49 @@ func (s *socialService) CreateParty(ctx context.Context, userID string) (string,
 
 func (s *socialService) PartyInvite(ctx context.Context, partyInviteReq models.PartyInviteRequest) error {
 
-	Leader, err := s.socialrepo.CheckPartyLeader(
-		ctx,
-		partyInviteReq.PartyID,
-	)
-	if err != nil {
-		return err
-	}
-	if Leader != partyInviteReq.SenderID {
-		return ErrNotPartyLeader
-	}
+	err := WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+		repo := socialrepo.NewSocialRepository(tx)
+		Leader, err := repo.CheckPartyLeader(
+			ctx,
+			partyInviteReq.PartyID,
+		)
+		if err != nil {
+			return err
+		}
+		if Leader != partyInviteReq.SenderID {
+			return ErrNotPartyLeader
+		}
 
-	// should prob make something to check if they are friends with party leader
+		blocked, err := repo.IsMutuallyBlocked(ctx, partyInviteReq.SenderID, partyInviteReq.RecipientID)
+		if blocked {
+			return errors.New("cannot send invite")
+		}
+		if err != nil {
+			return err
+		}
 
-	blocked, err := s.socialrepo.IsMutuallyBlocked(ctx, partyInviteReq.SenderID, partyInviteReq.RecipientID)
-	if blocked {
-		return errors.New("cannot send invite")
-	}
-	if err != nil {
-		return err
-	}
+		friends, err := repo.IsFriends(ctx, partyInviteReq.SenderID, partyInviteReq.RecipientID)
+		if err != nil {
+			return err
+		}
 
-	friends, err := s.socialrepo.IsFriends(ctx, partyInviteReq.SenderID, partyInviteReq.RecipientID)
-	if err != nil {
-		return err
-	}
+		if !friends {
+			return errors.New("cannot send party invite to user you not friends with")
+		}
 
-	if !friends {
-		return errors.New("cannot send party invite to user you not friends with")
-	}
+		exists, err := repo.AddPartyInvite(ctx, partyInviteReq)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return errors.New("party invite already exists")
+		}
 
-	exists, err := s.socialrepo.AddPartyInvite(ctx, partyInviteReq)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return errors.New("party invite already exists")
-	}
+		return nil
+	})
+
+	//
+
 	data, err := json.Marshal(map[string]any{
 		"party_id":  partyInviteReq.PartyID,
 		"sender_id": partyInviteReq.SenderID,

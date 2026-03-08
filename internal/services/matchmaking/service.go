@@ -204,13 +204,18 @@ func (s *matchmakingService) finalizeMatch(ctx context.Context, matchID string, 
 		return nil
 	}
 
-	if err := s.matchmakingrepo.AssignServerToMatch(ctx, matchID, server.ID); err != nil {
-		return err
-	}
+	err = WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+		repo := matchmakingrepo.NewMatchmakingRepository(tx)
 
-	if err := s.matchmakingrepo.UpdateMatchStatus(ctx, matchID, "ready"); err != nil {
-		return err
-	}
+		if err := repo.AssignServerToMatch(ctx, matchID, server.ID); err != nil {
+			return err
+		}
+
+		if err := repo.UpdateMatchStatus(ctx, matchID, "ready"); err != nil {
+			return err
+		}
+		return nil
+	})
 
 	players, _ := s.matchmakingrepo.GetMatchPlayers(ctx, matchID)
 
@@ -290,6 +295,7 @@ func (s *matchmakingService) ConfirmMatch(ctx context.Context, player models.Pla
 
 		return nil
 	})
+
 	if err != nil {
 		return err
 	}
