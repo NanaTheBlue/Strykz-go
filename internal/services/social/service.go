@@ -6,6 +6,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nanagoboiler/internal/repository/redis"
 	socialrepo "github.com/nanagoboiler/internal/repository/social"
 	"github.com/nanagoboiler/internal/services/notifications"
@@ -95,6 +97,7 @@ func (s *socialService) AcceptNotification(ctx context.Context, notif models.Not
 }
 
 func (s *socialService) AcceptPartyInvite(ctx context.Context, partyinvitereq models.PartyInviteRequest) error {
+	//This is Wrong
 	err := s.socialrepo.AddPartyMember(ctx, partyinvitereq)
 	if err != nil {
 		return err
@@ -180,4 +183,22 @@ func (s *socialService) PartyInvite(ctx context.Context, partyInviteReq models.P
 	}
 
 	return nil
+}
+
+func WithTx(
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	fn func(tx pgx.Tx) error,
+) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if err := fn(tx); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }

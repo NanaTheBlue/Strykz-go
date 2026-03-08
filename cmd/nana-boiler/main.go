@@ -15,6 +15,7 @@ import (
 	"github.com/nanagoboiler/internal/services/auth"
 	"github.com/nanagoboiler/internal/services/matchmaking"
 	"github.com/nanagoboiler/internal/services/orchestrator"
+	"github.com/nanagoboiler/internal/services/social"
 	"github.com/vultr/govultr/v3"
 
 	authrepo "github.com/nanagoboiler/internal/repository/auth"
@@ -22,6 +23,7 @@ import (
 	notificationrepo "github.com/nanagoboiler/internal/repository/notification"
 	orchestratorrepo "github.com/nanagoboiler/internal/repository/orchestrator"
 	redis "github.com/nanagoboiler/internal/repository/redis"
+	socialrepo "github.com/nanagoboiler/internal/repository/social"
 	"github.com/nanagoboiler/internal/services/notifications"
 
 	"context"
@@ -55,6 +57,7 @@ func main() {
 	notificationRepo := notificationrepo.NewNotificationsRepository(pool)
 	orchestratorrepo := orchestratorrepo.NewOrchestratorRepository(pool)
 	matchmakingRepo := matchmakingrepo.NewMatchmakingRepository(pool)
+	socialRepo := socialrepo.NewSocialRepository(pool)
 
 	//Connection Manager
 	hub := notifications.NewHub()
@@ -64,6 +67,7 @@ func main() {
 	orchestrator := orchestrator.NewOrchestrator(orchestratorrepo, vultrClient)
 	notificationService := notifications.NewnotificationsService(hub, redisRepo, notificationRepo)
 	matchmakingService := matchmaking.NewMatchmakingService(redisRepo, pool, matchmakingRepo, orchestratorrepo, orchestrator, notificationService, orchestrator)
+	socialService := social.NewsocialService(notificationService, socialRepo, redisRepo)
 
 	//grpc
 	grpcserver.StartGRPC(orchestrator, ":6767")
@@ -81,6 +85,8 @@ func main() {
 
 	// Notification Handlers
 	notifications := notificationsapi.Notifications(notificationService)
+	acceptNotification := notificationsapi.AcceptNotification(socialService)
+	rejectNotification := notificationsapi.RejectNotification(socialService)
 
 	//Health Handler
 	health := authapi.Health()
@@ -98,6 +104,8 @@ func main() {
 
 	// Notification Routes
 	router.HandleFunc("GET /notification/", notifications)
+	router.HandleFunc("POST /accept/", acceptNotification)
+	router.HandleFunc("POST /reject/", rejectNotification)
 
 	//Matchmaking Routes
 	router.HandleFunc("POST /que/", inQue)
