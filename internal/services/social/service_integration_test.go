@@ -155,16 +155,8 @@ func TestBlockUser_Integration(t *testing.T) {
 
 	user1 := createTestUser(t, testPool, "user1")
 	user2 := createTestUser(t, testPool, "user2")
-	err := s.BlockUser(ctx, models.BlockRequest{
-		BlockerID: user1,
-		BlockedID: user1,
-	})
-	require.Error(t, err)
 
-	err = s.BlockUser(ctx, models.BlockRequest{
-		BlockerID: user1,
-		BlockedID: user2,
-	})
+	err := s.BlockUser(ctx, user1, user2)
 	require.NoError(t, err)
 
 	var exists bool

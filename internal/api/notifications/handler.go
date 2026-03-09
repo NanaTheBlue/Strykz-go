@@ -19,6 +19,9 @@ var upgrader = websocket.Upgrader{
 
 func Notifications(s notifications.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 		user, ok := r.Context().Value(auth.UserContextKey).(*models.User)
 		if !ok || user == nil {
@@ -86,20 +89,21 @@ func AcceptNotification(s social.Service) http.HandlerFunc {
 
 func RejectNotification(s social.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 		user, ok := r.Context().Value(auth.UserContextKey).(*models.User)
 		if !ok || user == nil {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
-	}
-}
-func BlockUser(s notifications.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var req models.BlockRequest
-		err := json.NewDecoder(r.Body).Decode(&req)
-		if err != nil {
-			http.Error(w, "Invalid Request Json", http.StatusBadRequest)
+		var req models.Notification
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+
+		if err := decoder.Decode(&req); err != nil {
+			http.Error(w, "invalid JSON body", http.StatusBadRequest)
 			return
 		}
 

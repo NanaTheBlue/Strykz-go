@@ -63,12 +63,12 @@ func (s *socialService) SendFriendRequest(ctx context.Context, friendreq models.
 	return nil
 }
 
-func (s *socialService) BlockUser(ctx context.Context, req models.BlockRequest) error {
-	if req.BlockerID == req.BlockedID {
+func (s *socialService) BlockUser(ctx context.Context, blocker string, blocked string) error {
+	if blocker == blocked {
 		return errors.New("cannot block yourself")
 	}
 
-	err := s.socialrepo.BlockUser(ctx, req)
+	err := s.socialrepo.BlockUser(ctx, blocker, blocked)
 	if err != nil {
 		return err
 	}

@@ -6,8 +6,10 @@ import (
 	"os"
 
 	authapi "github.com/nanagoboiler/internal/api/auth"
+	"github.com/nanagoboiler/internal/api/middleware"
 	notificationsapi "github.com/nanagoboiler/internal/api/notifications"
 	matchmakingapi "github.com/nanagoboiler/internal/api/que"
+	socialapi "github.com/nanagoboiler/internal/api/social"
 	grpcserver "github.com/nanagoboiler/internal/grpc"
 	"golang.org/x/oauth2"
 
@@ -88,6 +90,9 @@ func main() {
 	acceptNotification := notificationsapi.AcceptNotification(socialService)
 	rejectNotification := notificationsapi.RejectNotification(socialService)
 
+	// Social Handlers
+	blockUser := socialapi.BlockUser(socialService)
+
 	//Health Handler
 	health := authapi.Health()
 
@@ -99,16 +104,19 @@ func main() {
 	router.HandleFunc("POST /login/", authLogin)
 	router.HandleFunc("GET /renew/", renew)
 
+	// Social Routes
+	router.HandleFunc("POST /block/", middleware.AuthMiddleware(blockUser))
+
 	//Health Routes
 	router.HandleFunc("POST /health/", health)
 
 	// Notification Routes
-	router.HandleFunc("GET /notification/", notifications)
-	router.HandleFunc("POST /accept/", acceptNotification)
-	router.HandleFunc("POST /reject/", rejectNotification)
+	router.HandleFunc("GET /notification/", middleware.AuthMiddleware(notifications))
+	router.HandleFunc("POST /accept/", middleware.AuthMiddleware(acceptNotification))
+	router.HandleFunc("POST /reject/", middleware.AuthMiddleware(rejectNotification))
 
 	//Matchmaking Routes
-	router.HandleFunc("POST /que/", inQue)
+	router.HandleFunc("POST /que/", middleware.AuthMiddleware(inQue))
 
 	println("Server Listening on Port 8085")
 	http.ListenAndServe(":8085", router)

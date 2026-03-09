@@ -151,13 +151,13 @@ func (r *socialRepo) RemoveFriend(ctx context.Context, userID string, friendID s
 	return nil
 }
 
-func (r *socialRepo) BlockUser(ctx context.Context, blockreq models.BlockRequest) error {
+func (r *socialRepo) BlockUser(ctx context.Context, blocker string, blocked string) error {
 
 	cmd, err := r.db.Exec(ctx, `
 		INSERT INTO blocks (blocker_id, blocked_id)
 		VALUES ($1, $2)
 		ON CONFLICT DO NOTHING
-	`, blockreq.BlockerID, blockreq.BlockedID)
+	`, blocker, blocked)
 	if err != nil {
 		return err
 	}
@@ -166,7 +166,7 @@ func (r *socialRepo) BlockUser(ctx context.Context, blockreq models.BlockRequest
 		return errors.New("user is already blocked")
 	}
 
-	a, b := normalizePair(blockreq.BlockerID, blockreq.BlockedID)
+	a, b := normalizePair(blocker, blocked)
 
 	_, err = r.db.Exec(ctx, `
 		DELETE FROM friends

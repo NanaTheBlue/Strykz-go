@@ -9,7 +9,7 @@ import (
 type SocialRepository interface {
 	RemoveFriend(ctx context.Context, userID string, friendID string) error
 	AddFriend(ctx context.Context, userID string, friendID string) error
-	BlockUser(ctx context.Context, blockreq models.BlockRequest) error
+	BlockUser(ctx context.Context, blocker string, blocked string) error
 	CreateFriendRequest(ctx context.Context, friendreq models.FriendRequestInput) error
 	DeleteFriendRequest(ctx context.Context, senderID string, recipientID string) error
 	CreateParty(ctx context.Context, leaderID string) (string, error)

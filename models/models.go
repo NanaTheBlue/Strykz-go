@@ -62,7 +62,6 @@ type ReportRequestInput struct {
 }
 
 type BlockRequest struct {
-	BlockerID string `json:"blocker_id"`
 	BlockedID string `json:"blocked_id"`
 }
 
