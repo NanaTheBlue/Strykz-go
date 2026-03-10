@@ -8,6 +8,6 @@ import (
 
 func Que(s matchmaking.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
+		//s.InQue()
 	}
 }

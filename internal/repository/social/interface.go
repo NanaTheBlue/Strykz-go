@@ -20,4 +20,5 @@ type SocialRepository interface {
 	AddPartyInvite(ctx context.Context, req models.PartyInviteRequest) (bool, error)
 	IsMutuallyBlocked(ctx context.Context, userA, userB string) (bool, error)
 	IsFriends(ctx context.Context, friend1ID string, friend2ID string) (bool, error)
+	GetFriendRequest(ctx context.Context, friendReqID string) (*models.FriendRequestInput, error)
 }

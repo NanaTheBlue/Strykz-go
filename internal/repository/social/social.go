@@ -220,6 +220,23 @@ func (r *socialRepo) CreateFriendRequest(ctx context.Context, friendreq models.F
 	return nil
 }
 
+func (r *socialRepo) GetFriendRequest(ctx context.Context, friendReqID string) (*models.FriendRequestInput, error) {
+	row := r.db.QueryRow(ctx, `
+		SELECT sender_id, recipient_id
+		FROM friend_requests
+		WHERE id = $1
+	`, friendReqID)
+
+	var req models.FriendRequestInput
+
+	err := row.Scan(&req.SenderID, &req.RecipientID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &req, nil
+}
+
 func (r *socialRepo) CreateParty(ctx context.Context, leaderID string) (string, error) {
 
 	var partyID string
@@ -243,9 +260,12 @@ func (r *socialRepo) CheckPartyLeader(ctx context.Context, partyID string) (stri
 }
 
 func (r *socialRepo) DeleteFriendRequest(ctx context.Context, senderID string, recipientID string) error {
-	_, err := r.db.Exec(ctx, "DELETE FROM friend_requests WHERE sender_id = $1 AND recipient_id = $2", senderID, recipientID)
+	cmd, err := r.db.Exec(ctx, "DELETE FROM friend_requests WHERE sender_id = $1 AND recipient_id = $2", senderID, recipientID)
 	if err != nil {
 		return err
+	}
+	if cmd.RowsAffected() == 0 {
+		return errors.New("friend request not found")
 	}
 	return nil
 }

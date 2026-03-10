@@ -87,11 +87,10 @@ func main() {
 
 	// Notification Handlers
 	notifications := notificationsapi.Notifications(notificationService)
-	acceptNotification := notificationsapi.AcceptNotification(socialService)
-	rejectNotification := notificationsapi.RejectNotification(socialService)
 
 	// Social Handlers
 	blockUser := socialapi.BlockUser(socialService)
+	acceptFriendRequest := socialapi.AcceptFriendRequest(socialService)
 
 	//Health Handler
 	health := authapi.Health()
@@ -106,14 +105,13 @@ func main() {
 
 	// Social Routes
 	router.HandleFunc("POST /block/", middleware.AuthMiddleware(blockUser))
+	router.HandleFunc("POST /friend-requests/{id}/accept", middleware.AuthMiddleware(acceptFriendRequest))
 
 	//Health Routes
 	router.HandleFunc("POST /health/", health)
 
 	// Notification Routes
 	router.HandleFunc("GET /notification/", middleware.AuthMiddleware(notifications))
-	router.HandleFunc("POST /accept/", middleware.AuthMiddleware(acceptNotification))
-	router.HandleFunc("POST /reject/", middleware.AuthMiddleware(rejectNotification))
 
 	//Matchmaking Routes
 	router.HandleFunc("POST /que/", middleware.AuthMiddleware(inQue))

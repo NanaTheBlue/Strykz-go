@@ -113,6 +113,28 @@ func (s *socialService) RejectNotification(ctx context.Context, notifID string) 
 	return nil
 }
 
+func (s *socialService) AcceptFriendRequest(ctx context.Context, userID string, friendreqID string) error {
+	err := WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+		repo := socialrepo.NewSocialRepository(tx)
+		req, err := repo.GetFriendRequest(ctx, friendreqID)
+		if err != nil {
+			return err
+		}
+		if req.RecipientID != userID {
+			return errors.New("UNAUTHORIZED")
+		}
+
+		err = repo.AddFriend(ctx, userID, req.SenderID)
+		if err != nil {
+			return err
+		}
+
+		return nil
+
+	})
+	return err
+}
+
 func (s *socialService) CreateParty(ctx context.Context, userID string) (string, error) {
 	partyID, err := s.socialrepo.CreateParty(ctx, userID)
 	if err != nil {
@@ -164,6 +186,9 @@ func (s *socialService) PartyInvite(ctx context.Context, partyInviteReq models.P
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	//
 
