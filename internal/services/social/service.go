@@ -132,6 +132,8 @@ func (s *socialService) AcceptFriendRequest(ctx context.Context, userID string, 
 		return nil
 
 	})
+
+	//TODO: Send Out Notification
 	return err
 }
 

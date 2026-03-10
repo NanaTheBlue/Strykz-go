@@ -3,7 +3,6 @@ package socialapi
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/nanagoboiler/internal/services/auth"
@@ -56,13 +55,7 @@ func AcceptFriendRequest(s social.Service) http.HandlerFunc {
 			return
 		}
 
-		parts := strings.Split(r.URL.Path, "/")
-		if len(parts) < 4 {
-			http.Error(w, "invalid URL", http.StatusBadRequest)
-			return
-		}
-
-		idStr := parts[3]
+		idStr := r.PathValue("id")
 		reqID, err := uuid.Parse(idStr)
 		if err != nil {
 			http.Error(w, "invalid request id", http.StatusBadRequest)
