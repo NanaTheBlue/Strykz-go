@@ -17,4 +17,5 @@ type MatchmakingRepository interface {
 	GetMatch(ctx context.Context, matchID string) (models.Match, error)
 	GetMatchPlayers(ctx context.Context, matchID string) ([]models.Player, error)
 	GetMatchesByStatus(ctx context.Context, status models.MatchStatus) ([]models.Match, error)
+	GetPlayerByID(ctx context.Context, userID string) (models.Player, error)
 }

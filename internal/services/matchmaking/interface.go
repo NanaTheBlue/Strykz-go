@@ -11,4 +11,5 @@ type Service interface {
 	QueReader(ctx context.Context, mode string)
 	StartMatchMaking(ctx context.Context, mode string)
 	CreateMatch(ctx context.Context, matchCanidates []*models.Player, region string) error
+	GetPlayerByID(ctx context.Context, userID string) (models.Player, error)
 }

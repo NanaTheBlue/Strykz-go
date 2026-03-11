@@ -41,7 +41,7 @@ func BlockUser(s social.Service) http.HandlerFunc {
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 func AcceptFriendRequest(s social.Service) http.HandlerFunc {

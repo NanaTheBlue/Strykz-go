@@ -119,7 +119,24 @@ func (r *matchmakingRepo) GetMatchesByStatus(ctx context.Context, status models.
 	return matches, nil
 
 }
+func (r *matchmakingRepo) GetPlayerByID(ctx context.Context, userID string) (models.Player, error) {
+	var player models.Player
 
+	err := r.db.QueryRow(
+		ctx,
+		"SELECT id, steam_id FROM users WHERE id = $1",
+		userID,
+	).Scan(
+		&player.Player_id,
+		&player.Player_steamid,
+	)
+
+	if err != nil {
+		return models.Player{}, err
+	}
+
+	return player, nil
+}
 func (r *matchmakingRepo) GetMatch(ctx context.Context, matchID string) (models.Match, error) {
 	var match models.Match
 	err := r.db.QueryRow(ctx, "SELECT id, server_id, started_at, accept_deadline, status, ended_at FROM matches WHERE id = $1", matchID).Scan(&match.ID,

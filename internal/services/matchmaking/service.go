@@ -261,6 +261,14 @@ func (s *matchmakingService) updatePlayerStatus(ctx context.Context, matchID str
 	return nil
 }
 
+func (s *matchmakingService) GetPlayerByID(ctx context.Context, userID string) (models.Player, error) {
+	player, err := s.matchmakingrepo.GetPlayerByID(ctx, userID)
+	if err != nil {
+		return models.Player{}, err
+	}
+	return player, nil
+}
+
 func (s *matchmakingService) ConfirmMatch(ctx context.Context, player models.Player, matchID string, region string) error {
 	var shouldFinalize bool
 
