@@ -3,6 +3,7 @@ package grpcserver
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	pb "github.com/nanagoboiler/gen"
@@ -63,6 +64,21 @@ func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
 			}
 		case *pb.SidecarEvent_ServerStopped:
 			log.Println("Here We Would Delete The Server")
+		case *pb.SidecarEvent_LogLine:
+			line := payload.LogLine.Raw
+
+			if strings.Contains(line, "MATCH_FINISHED") {
+
+				log.Printf("match finished on server %s: %s", serverID, line)
+
+				ctx, cancel := context.WithTimeout(stream.Context(), 2*time.Second)
+				defer cancel()
+
+				err := s.orchestrator.UpdateServerStatus(ctx, serverID, models.ServerReady)
+				if err != nil {
+					log.Println(err)
+				}
+			}
 		default:
 			log.Printf("unhandled event type %T from %s", payload, evt.GetServerId())
 		}

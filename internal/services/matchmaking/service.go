@@ -36,7 +36,7 @@ func NewMatchmakingService(redisRepo redis.Store, pool *pgxpool.Pool, matchmakin
 
 func (s *matchmakingService) InQue(ctx context.Context, player *models.Player) error {
 
-	// Should Prob do some validation here to make sure none of these mfs is banned and shit
+	// Should Prob do some validation here to make sure none of these players are banned
 
 	err := s.RedisRepo.Que(ctx, "1v1", "us", player)
 	if err != nil {
