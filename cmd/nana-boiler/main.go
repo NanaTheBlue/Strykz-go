@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	authapi "github.com/nanagoboiler/internal/api/auth"
 	"github.com/nanagoboiler/internal/api/middleware"
@@ -33,6 +34,7 @@ import (
 
 func main() {
 	router := http.NewServeMux()
+	rl := middleware.NewRateLimiter(10, time.Second*1)
 	ctx := context.Background()
 	postgresURL := os.Getenv("POSTGRES_URL")
 	address := os.Getenv("REDIS_ADDRESS")
@@ -99,23 +101,23 @@ func main() {
 	inQue := matchmakingapi.Que(matchmakingService)
 
 	//Auth Routes
-	router.HandleFunc("POST /register/", authRegister)
-	router.HandleFunc("POST /login/", authLogin)
-	router.HandleFunc("GET /renew/", renew)
+	router.HandleFunc("POST /register/", rl.Limit(authRegister))
+	router.HandleFunc("POST /login/", rl.Limit(authLogin))
+	router.HandleFunc("GET /renew/", rl.Limit(renew))
 
 	// Social Routes
-	router.HandleFunc("POST /block/", middleware.AuthMiddleware(blockUser))
-	router.HandleFunc("POST /friend-requests/{id}/accept", middleware.AuthMiddleware(acceptFriendRequest))
+	router.HandleFunc("POST /block/", rl.Limit(middleware.AuthMiddleware(blockUser)))
+	router.HandleFunc("POST /friend-requests/{id}/accept", rl.Limit(middleware.AuthMiddleware(acceptFriendRequest)))
 
 	//Health Routes
-	router.HandleFunc("POST /health/", health)
+	router.HandleFunc("POST /health/", rl.Limit(health))
 
 	// Notification Routes
-	router.HandleFunc("GET /notification/", middleware.AuthMiddleware(notifications))
+	router.HandleFunc("GET /notification/", rl.Limit(middleware.AuthMiddleware(notifications)))
 
 	//Matchmaking Routes
-	router.HandleFunc("POST /que/", middleware.AuthMiddleware(inQue))
+	router.HandleFunc("POST /que/", rl.Limit(middleware.AuthMiddleware(inQue)))
 
-	println("Server Listening on Port 8085")
-	http.ListenAndServe(":8085", router)
+	println("Server Listening on Port 8080")
+	http.ListenAndServe(":8080", router)
 }

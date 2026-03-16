@@ -23,7 +23,7 @@ WORKDIR /app
 COPY --from=build-stage /docker-strykz /docker-strykz
 COPY --from=build-stage /app/scripts /app/scripts
 
-EXPOSE 8085
+EXPOSE 8080
 EXPOSE 6767
 
 
