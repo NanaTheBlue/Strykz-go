@@ -158,24 +158,23 @@ func (s *matchmakingService) ReconcileAwaitingMatches(ctx context.Context) {
 	}
 
 	for _, match := range matches {
-		server, _ := s.orchestratorrepo.AcquireReadyServer(ctx, match.Region)
-		if server != nil {
-			err := s.matchmakingrepo.AssignServerToMatch(ctx, match.ID, server.ID)
+		server, err := s.orchestratorrepo.AcquireReadyServer(ctx, match.Region)
+		if err != nil {
+			log.Printf("ERROR: AcquireReadyServer Error : %v", err)
+			continue
+		}
 
-			if err != nil {
-				log.Printf("ERROR: AssignServerToMatch Error : %v", err)
-			}
-		} else {
-			// continue because we should have already requested capacity no need to double request it
+		if server == nil {
+			continue
+		}
+		if err := s.finalizeMatch(ctx, match.ID, server.ID); err != nil {
+			log.Printf("ERROR: finalizeWithServer failed for match %s: %v", match.ID, err)
 			continue
 		}
 	}
 }
 
 func (s *matchmakingService) StartReconciler(ctx context.Context) {
-	// This Specifically We will make event driven with SQS + Lambda
-
-	// Should look at other things to make event driven prob the whole orchestrator
 
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
@@ -190,24 +189,11 @@ func (s *matchmakingService) StartReconciler(ctx context.Context) {
 	}
 }
 
-func (s *matchmakingService) finalizeMatch(ctx context.Context, matchID string, region string) error {
-	server, err := s.orchestratorrepo.AcquireReadyServer(ctx, region)
-	if err != nil {
-		return err
-	}
-	if server == nil {
-		s.capacityRequester.Request(region)
-		if err := s.matchmakingrepo.UpdateMatchStatus(ctx, matchID, models.AwaitingServer); err != nil {
-			return err
-		}
-
-		return nil
-	}
-
-	err = WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+func (s *matchmakingService) finalizeMatch(ctx context.Context, matchID string, serverID string) error {
+	err := WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		repo := matchmakingrepo.NewMatchmakingRepository(tx)
 
-		if err := repo.AssignServerToMatch(ctx, matchID, server.ID); err != nil {
+		if err := repo.AssignServerToMatch(ctx, matchID, serverID); err != nil {
 			return err
 		}
 
@@ -216,22 +202,28 @@ func (s *matchmakingService) finalizeMatch(ctx context.Context, matchID string, 
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
-	players, _ := s.matchmakingrepo.GetMatchPlayers(ctx, matchID)
+	players, err := s.matchmakingrepo.GetMatchPlayers(ctx, matchID)
+	if err != nil {
+		return err
+	}
 
 	steamIDs := make([]string, len(players))
 	for i, p := range players {
 		steamIDs[i] = p.Player_steamid
 	}
 
-	if err := s.serverSpeaker.ReloadWhitelist(server.ID, steamIDs); err != nil {
+	if err := s.serverSpeaker.ReloadWhitelist(serverID, steamIDs); err != nil {
 		return err
 	}
 
 	for _, p := range players {
 		payload := map[string]any{
 			"match_id":  matchID,
-			"server_id": server.ID,
+			"server_id": serverID,
 			"type":      "match_ready",
 		}
 		dataBytes, _ := json.Marshal(payload)
@@ -309,7 +301,17 @@ func (s *matchmakingService) ConfirmMatch(ctx context.Context, player models.Pla
 	}
 
 	if shouldFinalize {
-		return s.finalizeMatch(ctx, matchID, region)
+		server, err := s.orchestratorrepo.AcquireReadyServer(ctx, region)
+		if err != nil {
+			return err
+		}
+		if server == nil {
+			s.capacityRequester.Request(region)
+
+			return s.matchmakingrepo.UpdateMatchStatus(ctx, matchID, models.AwaitingServer)
+		}
+
+		return s.finalizeMatch(ctx, matchID, server.ID)
 	}
 	// should improve this just prototype rn
 	return nil
