@@ -16,6 +16,18 @@ resource "aws_subnet" "public" {
   availability_zone       = "us-east-1a"
   map_public_ip_on_launch = true
 }
+resource "aws_subnet" "public_b" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.4.0/24"
+  availability_zone       = "us-east-1b"
+  map_public_ip_on_launch = true
+}
+
+resource "aws_subnet" "private_b" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.3.0/24"
+  availability_zone = "us-east-1b"
+}
 
 resource "aws_subnet" "private" {
   vpc_id            = aws_vpc.main.id
@@ -45,7 +57,7 @@ resource "aws_elastic_beanstalk_application" "backend" {
 resource "aws_elastic_beanstalk_environment" "backend_env" {
   name                = "go-backend-env"
   application         = aws_elastic_beanstalk_application.backend.name
-  solution_stack_name = "64bit Amazon Linux 2 v3.6.5 running Go"
+  solution_stack_name = "64bit Amazon Linux 2023 v4.7.0 running Go 1"
 
   setting {
     namespace = "aws:ec2:vpc"
@@ -56,13 +68,13 @@ resource "aws_elastic_beanstalk_environment" "backend_env" {
   setting {
     namespace = "aws:ec2:vpc"
     name      = "Subnets"
-    value     = aws_subnet.private.id
+    value     = "${aws_subnet.private.id},${aws_subnet.private_b.id}"
   }
 
   setting {
     namespace = "aws:ec2:vpc"
     name      = "ELBSubnets"
-    value     = aws_subnet.public.id
+    value     = "${aws_subnet.public.id},${aws_subnet.public_b.id}"
   }
 
   setting {
@@ -89,7 +101,8 @@ resource "aws_db_subnet_group" "db_subnets" {
   name = "db-subnets"
 
   subnet_ids = [
-    aws_subnet.private.id
+    aws_subnet.private.id,
+    aws_subnet.private_b.id
   ]
 }
 
@@ -113,20 +126,9 @@ resource "aws_db_instance" "postgres" {
   skip_final_snapshot = true
 }
 
-resource "aws_instance" "game_server" {
-  ami           = "ami-0198cdf7458a7a932"
-  instance_type = "t3.micro"
 
-  subnet_id = aws_subnet.public.id
-
-  vpc_security_group_ids = [aws_security_group.game_server.id]
-
-  tags = {
-    Name = "game-server"
-  }
-}
 resource "aws_instance" "redis" {
-  ami           = "ami-0198cdf7458a7a932"
+  ami           = "ami-0ec10929233384c7f"
   instance_type = "t3.micro"
 
   subnet_id = aws_subnet.private.id

@@ -99,6 +99,13 @@ func (s *Orchestrator) UpdateServerStatus(ctx context.Context, serverID string, 
 func (s *Orchestrator) CreateServer(ctx context.Context, region string) (string, error) {
 	// todo make this more modular rn its just in testing phase so it dont matter
 
+	const (
+		amiID           = "ami-0a2dfeedd475ba8ed"
+		subnetID        = "subnet-xxxxxxxx"
+		securityGroupID = "sg-xxxxxxxx"
+		instanceType    = "t3.micro"
+	)
+
 	enableIPv6 := false
 	instanceOptions := &govultr.InstanceCreateReq{
 		Label:      "awesome-go-app",

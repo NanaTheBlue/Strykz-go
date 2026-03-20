@@ -5,3 +5,7 @@ docker-compose.yml
 .tfstate
 .tfstate.backup
 .tfplan
+.terraform
+.terraform.lock.hcl
+infra/terraform.tfstate.backup
+infra/terraform.tfstate
