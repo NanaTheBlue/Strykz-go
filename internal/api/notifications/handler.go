@@ -13,7 +13,13 @@ import (
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true
+		origin := r.Header.Get("Origin")
+		switch origin {
+		case "https://strykz.net":
+			return true
+		default:
+			return false
+		}
 	},
 }
 
