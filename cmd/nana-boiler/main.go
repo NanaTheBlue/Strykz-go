@@ -101,22 +101,22 @@ func main() {
 	inQue := matchmakingapi.Que(matchmakingService)
 
 	//Auth Routes
-	router.HandleFunc("POST /register/", rl.Limit(authRegister))
-	router.HandleFunc("POST /login/", rl.Limit(authLogin))
-	router.HandleFunc("GET /renew/", rl.Limit(renew))
+	router.HandleFunc("POST /register/", middleware.CORSMiddleware(rl.Limit(authRegister)))
+	router.HandleFunc("POST /login/", middleware.CORSMiddleware(rl.Limit(authLogin)))
+	router.HandleFunc("GET /renew/", middleware.CORSMiddleware(rl.Limit(renew)))
 
 	// Social Routes
-	router.HandleFunc("POST /block/", rl.Limit(middleware.AuthMiddleware(blockUser)))
-	router.HandleFunc("POST /friend-requests/{id}/accept", rl.Limit(middleware.AuthMiddleware(acceptFriendRequest)))
+	router.HandleFunc("POST /block/", middleware.CORSMiddleware(rl.Limit(middleware.AuthMiddleware(blockUser))))
+	router.HandleFunc("POST /friend-requests/{id}/accept", middleware.CORSMiddleware(rl.Limit(middleware.AuthMiddleware(acceptFriendRequest))))
 
 	//Health Routes
-	router.HandleFunc("POST /health/", rl.Limit(health))
+	router.HandleFunc("POST /health/", middleware.CORSMiddleware(rl.Limit(health)))
 
 	// Notification Routes
-	router.HandleFunc("GET /notification/", rl.Limit(middleware.AuthMiddleware(notifications)))
+	router.HandleFunc("GET /notification/", middleware.CORSMiddleware(rl.Limit(middleware.AuthMiddleware(notifications))))
 
 	//Matchmaking Routes
-	router.HandleFunc("POST /que/", rl.Limit(middleware.AuthMiddleware(inQue)))
+	router.HandleFunc("POST /que/", middleware.CORSMiddleware(rl.Limit(middleware.AuthMiddleware(inQue))))
 
 	println("Server Listening on Port 8080")
 	http.ListenAndServe(":8080", router)
