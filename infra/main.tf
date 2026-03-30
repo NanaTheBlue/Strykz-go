@@ -39,6 +39,36 @@ resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 }
 
+resource "aws_eip" "nat" {
+  domain = "vpc"
+}
+
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public.id
+  depends_on    = [aws_internet_gateway.gw]
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+}
+
+resource "aws_route" "private_internet" {
+  route_table_id         = aws_route_table.private.id
+  nat_gateway_id         = aws_nat_gateway.nat.id
+  destination_cidr_block = "0.0.0.0/0"
+}
+
+resource "aws_route_table_association" "private_assoc" {
+  subnet_id      = aws_subnet.private.id
+  route_table_id = aws_route_table.private.id
+}
+
+resource "aws_route_table_association" "private_assoc_b" {
+  subnet_id      = aws_subnet.private_b.id
+  route_table_id = aws_route_table.private.id
+}
+
 resource "aws_route" "internet" {
   route_table_id         = aws_route_table.public.id
   gateway_id             = aws_internet_gateway.gw.id
@@ -49,9 +79,38 @@ resource "aws_route_table_association" "public_assoc" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public.id
 }
+resource "aws_route_table_association" "public_assoc_b" {
+  subnet_id      = aws_subnet.public_b.id
+  route_table_id = aws_route_table.public.id
+}
 
 resource "aws_elastic_beanstalk_application" "backend" {
   name = "go-backend"
+}
+
+resource "aws_iam_role" "eb_instance_role" {
+  name = "go-backend-ec2-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eb_web" {
+  role       = aws_iam_role.eb_instance_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier"
+}
+
+resource "aws_iam_instance_profile" "eb_instance_profile" {
+  name = "go-backend-instance-profile"
+  role = aws_iam_role.eb_instance_role.name
 }
 
 resource "aws_elastic_beanstalk_environment" "backend_env" {
@@ -59,6 +118,13 @@ resource "aws_elastic_beanstalk_environment" "backend_env" {
   application         = aws_elastic_beanstalk_application.backend.name
   solution_stack_name = "64bit Amazon Linux 2023 v4.7.0 running Go 1"
 
+  depends_on = [
+    aws_internet_gateway.gw,
+    aws_route.internet,
+    aws_route_table_association.public_assoc,
+    aws_route_table_association.public_assoc_b,
+    aws_nat_gateway.nat
+  ]
   setting {
     namespace = "aws:ec2:vpc"
     name      = "VPCId"
@@ -92,6 +158,30 @@ resource "aws_elastic_beanstalk_environment" "backend_env" {
     namespace = "aws:elbv2:loadbalancer"
     name      = "SecurityGroups"
     value     = aws_security_group.alb.id
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:environment"
+    name      = "LoadBalancerType"
+    value     = "application"
+  }
+
+  setting {
+    namespace = "aws:ec2:vpc"
+    name      = "AssociatePublicIpAddress"
+    value     = "false"
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:environment"
+    name      = "ServiceRole"
+    value     = "aws-elasticbeanstalk-service-role"
+  }
+
+  setting {
+    namespace = "aws:autoscaling:launchconfiguration"
+    name      = "IamInstanceProfile"
+    value     = aws_iam_instance_profile.eb_instance_profile.name
   }
 
 }

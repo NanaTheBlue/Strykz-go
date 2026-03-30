@@ -3,8 +3,6 @@ module github.com/nanagoboiler
 go 1.26
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.41.2
-	github.com/aws/aws-sdk-go-v2/service/sqs v1.42.22
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
@@ -20,9 +18,6 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.18 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.18 // indirect
-	github.com/aws/smithy-go v1.24.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
