@@ -5,16 +5,18 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	orchestratorrepo "github.com/nanagoboiler/internal/repository/orchestrator"
 	"github.com/vultr/govultr/v3"
-	"golang.org/x/oauth2"
 )
 
 var (
@@ -27,7 +29,7 @@ func TestMain(m *testing.M) {
 	envPath := filepath.Join("..", "..", "..", ".env")
 	_ = godotenv.Load(envPath)
 
-	if os.Getenv("RUN_VULTR_TESTS") != "true" {
+	if os.Getenv("RUN_VULTRls_TESTS") != "true" {
 		fmt.Println("Skipping Vultr integration tests (set RUN_VULTR_TESTS=true)")
 		os.Exit(0)
 	}
@@ -47,13 +49,16 @@ func TestMain(m *testing.M) {
 	}
 	defer testPool.Close()
 
-	config := &oauth2.Config{}
-	ts := config.TokenSource(ctx, &oauth2.Token{AccessToken: apiKey})
-	vultrClient = govultr.NewClient(oauth2.NewClient(ctx, ts))
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ec2Client := ec2.NewFromConfig(cfg)
 
 	repo := orchestratorrepo.NewOrchestratorRepository(testPool)
 
-	testService = NewOrchestrator(repo, vultrClient)
+	testService = NewOrchestrator(repo, ec2Client)
 
 	code := m.Run()
 	os.Exit(code)

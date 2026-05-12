@@ -6,20 +6,20 @@ import (
 	"os"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	authapi "github.com/nanagoboiler/internal/api/auth"
 	"github.com/nanagoboiler/internal/api/middleware"
 	notificationsapi "github.com/nanagoboiler/internal/api/notifications"
 	matchmakingapi "github.com/nanagoboiler/internal/api/que"
 	socialapi "github.com/nanagoboiler/internal/api/social"
 	grpcserver "github.com/nanagoboiler/internal/grpc"
-	"golang.org/x/oauth2"
 
 	"github.com/nanagoboiler/internal/bootstrap"
 	"github.com/nanagoboiler/internal/services/auth"
 	"github.com/nanagoboiler/internal/services/matchmaking"
 	"github.com/nanagoboiler/internal/services/orchestrator"
 	"github.com/nanagoboiler/internal/services/social"
-	"github.com/vultr/govultr/v3"
 
 	authrepo "github.com/nanagoboiler/internal/repository/auth"
 	matchmakingrepo "github.com/nanagoboiler/internal/repository/matchmaking"
@@ -39,11 +39,13 @@ func main() {
 	postgresURL := os.Getenv("POSTGRES_URL")
 	address := os.Getenv("REDIS_ADDRESS")
 	password := os.Getenv("REDIS_PASSWORD")
-	apiKey := os.Getenv("VultrAPIKey")
 
-	config := &oauth2.Config{}
-	ts := config.TokenSource(ctx, &oauth2.Token{AccessToken: apiKey})
-	vultrClient := govultr.NewClient(oauth2.NewClient(ctx, ts))
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ec2Client := ec2.NewFromConfig(cfg)
 
 	pool, err := bootstrap.NewPostgresPool(ctx, postgresURL)
 	if err != nil {
@@ -68,7 +70,7 @@ func main() {
 
 	// Services
 	authService := auth.NewAuthService(authRepo, tokenRepo)
-	orchestrator := orchestrator.NewOrchestrator(orchestratorrepo, vultrClient)
+	orchestrator := orchestrator.NewOrchestrator(orchestratorrepo, ec2Client)
 	notificationService := notifications.NewnotificationsService(hub, redisRepo, notificationRepo)
 	matchmakingService := matchmaking.NewMatchmakingService(redisRepo, pool, matchmakingRepo, orchestratorrepo, orchestrator, notificationService, orchestrator)
 	socialService := social.NewsocialService(notificationService, pool, socialRepo, redisRepo)

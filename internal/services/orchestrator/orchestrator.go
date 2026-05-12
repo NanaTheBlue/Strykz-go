@@ -7,23 +7,24 @@ import (
 	"log"
 	"sync"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	pb "github.com/nanagoboiler/gen"
 	orchestratorrepo "github.com/nanagoboiler/internal/repository/orchestrator"
 	"github.com/nanagoboiler/models"
-	"github.com/vultr/govultr/v3"
 )
 
 type Orchestrator struct {
 	orchestratorrepo orchestratorrepo.OrchestratoryRepository
-	vultrclient      *govultr.Client
+	ec2client        *ec2.Client
 	streams          map[string]pb.SidecarService_ConnectServer
 	mu               sync.RWMutex
 }
 
-func NewOrchestrator(orchestratorrepo orchestratorrepo.OrchestratoryRepository, vultrclient *govultr.Client) Service {
+func NewOrchestrator(orchestratorrepo orchestratorrepo.OrchestratoryRepository, ec2client *ec2.Client) Service {
 	return &Orchestrator{
 		orchestratorrepo: orchestratorrepo,
-		vultrclient:      vultrclient,
+		ec2client:        ec2client,
 		streams:          make(map[string]pb.SidecarService_ConnectServer),
 	}
 }
@@ -106,28 +107,29 @@ func (s *Orchestrator) CreateServer(ctx context.Context, region string) (string,
 		instanceType    = "t3.micro"
 	)
 
-	enableIPv6 := false
-	instanceOptions := &govultr.InstanceCreateReq{
-		Label:      "awesome-go-app",
-		Hostname:   "awesome-go.com",
-		Backups:    "enabled",
-		EnableIPv6: &enableIPv6,
-		OsID:       2284,
-		Plan:       "vc2-1c-1gb",
-		Region:     region,
+	instanceOptions := &ec2.RunInstancesInput{
+		ImageId:      aws.String(amiID),
+		InstanceType: instanceType,
+		MinCount:     aws.Int32(1),
+		MaxCount:     aws.Int32(1),
 	}
 
-	instance, _, err := s.vultrclient.Instance.Create(ctx, instanceOptions)
+	instance, err := s.ec2client.RunInstances(ctx, instanceOptions)
 	if err != nil {
 		return "", err
 	}
-	if instance.ID == "" {
-		return "", errors.New("Instance ID Is Blank")
+	if len(instance.Instances) == 0 {
+		return "", errors.New("no instances created")
+	}
+
+	instanceID := aws.ToString(instance.Instances[0].InstanceId)
+	if instanceID == "" {
+		return "", errors.New("instance id is empty")
 	}
 
 	server := models.Gameserver{
-		ID:     instance.ID,
-		IP:     instance.MainIP,
+		ID:     instanceID,
+		IP:     "",
 		Region: region,
 		Status: "Creating",
 	}
@@ -137,7 +139,7 @@ func (s *Orchestrator) CreateServer(ctx context.Context, region string) (string,
 		return "", err
 	}
 
-	return instance.ID, nil
+	return instanceID, nil
 }
 
 func (s *Orchestrator) Request(region string) {
