@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	orchestratorrepo "github.com/nanagoboiler/internal/repository/orchestrator"
+	gameserverconfig "github.com/nanagoboiler/internal/services/config"
 	"github.com/vultr/govultr/v3"
 )
 
@@ -57,8 +58,9 @@ func TestMain(m *testing.M) {
 	ec2Client := ec2.NewFromConfig(cfg)
 
 	repo := orchestratorrepo.NewOrchestratorRepository(testPool)
+	config := gameserverconfig.Load()
 
-	testService = NewOrchestrator(repo, ec2Client)
+	testService = NewOrchestrator(repo, ec2Client, config)
 
 	code := m.Run()
 	os.Exit(code)

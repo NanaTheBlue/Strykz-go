@@ -9,8 +9,10 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	pb "github.com/nanagoboiler/gen"
 	orchestratorrepo "github.com/nanagoboiler/internal/repository/orchestrator"
+	gameserverconfig "github.com/nanagoboiler/internal/services/config"
 	"github.com/nanagoboiler/models"
 )
 
@@ -19,13 +21,15 @@ type Orchestrator struct {
 	ec2client        *ec2.Client
 	streams          map[string]pb.SidecarService_ConnectServer
 	mu               sync.RWMutex
+	cfg              gameserverconfig.Config
 }
 
-func NewOrchestrator(orchestratorrepo orchestratorrepo.OrchestratoryRepository, ec2client *ec2.Client) Service {
+func NewOrchestrator(orchestratorrepo orchestratorrepo.OrchestratoryRepository, ec2client *ec2.Client, cfg gameserverconfig.Config) Service {
 	return &Orchestrator{
 		orchestratorrepo: orchestratorrepo,
 		ec2client:        ec2client,
 		streams:          make(map[string]pb.SidecarService_ConnectServer),
+		cfg:              cfg,
 	}
 }
 
@@ -100,18 +104,15 @@ func (s *Orchestrator) UpdateServerStatus(ctx context.Context, serverID string, 
 func (s *Orchestrator) CreateServer(ctx context.Context, region string) (string, error) {
 	// todo make this more modular rn its just in testing phase so it dont matter
 
-	const (
-		amiID           = "ami-0a2dfeedd475ba8ed"
-		subnetID        = "subnet-xxxxxxxx"
-		securityGroupID = "sg-xxxxxxxx"
-		instanceType    = "t3.micro"
-	)
-
 	instanceOptions := &ec2.RunInstancesInput{
-		ImageId:      aws.String(amiID),
-		InstanceType: instanceType,
+		ImageId:      aws.String(s.cfg.AMI),
+		InstanceType: types.InstanceType(s.cfg.InstanceType),
 		MinCount:     aws.Int32(1),
 		MaxCount:     aws.Int32(1),
+		SubnetId:     aws.String(s.cfg.SubnetID),
+		SecurityGroupIds: []string{
+			s.cfg.SecurityGroup,
+		},
 	}
 
 	instance, err := s.ec2client.RunInstances(ctx, instanceOptions)

@@ -17,6 +17,7 @@ import (
 
 	"github.com/nanagoboiler/internal/bootstrap"
 	"github.com/nanagoboiler/internal/services/auth"
+	gameserverconfig "github.com/nanagoboiler/internal/services/config"
 	"github.com/nanagoboiler/internal/services/matchmaking"
 	"github.com/nanagoboiler/internal/services/orchestrator"
 	"github.com/nanagoboiler/internal/services/social"
@@ -36,9 +37,12 @@ func main() {
 	router := http.NewServeMux()
 	rl := middleware.NewRateLimiter(10, time.Second*1)
 	ctx := context.Background()
+
+	// TODO: cleanup this up so many os.getEnvs
 	postgresURL := os.Getenv("POSTGRES_URL")
 	address := os.Getenv("REDIS_ADDRESS")
 	password := os.Getenv("REDIS_PASSWORD")
+	gameServerConfig := gameserverconfig.Load()
 
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -70,7 +74,7 @@ func main() {
 
 	// Services
 	authService := auth.NewAuthService(authRepo, tokenRepo)
-	orchestrator := orchestrator.NewOrchestrator(orchestratorrepo, ec2Client)
+	orchestrator := orchestrator.NewOrchestrator(orchestratorrepo, ec2Client, gameServerConfig)
 	notificationService := notifications.NewnotificationsService(hub, redisRepo, notificationRepo)
 	matchmakingService := matchmaking.NewMatchmakingService(redisRepo, pool, matchmakingRepo, orchestratorrepo, orchestrator, notificationService, orchestrator)
 	socialService := social.NewsocialService(notificationService, pool, socialRepo, redisRepo)

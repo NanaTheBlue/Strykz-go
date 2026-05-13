@@ -12,6 +12,7 @@ import (
 	pb "github.com/nanagoboiler/gen"
 
 	grpcserver "github.com/nanagoboiler/internal/grpc"
+	gameserverconfig "github.com/nanagoboiler/internal/services/config"
 	"github.com/nanagoboiler/internal/services/orchestrator"
 	"github.com/nanagoboiler/models"
 	"google.golang.org/grpc"
@@ -43,13 +44,20 @@ func (f *fakeRepo) GetServersByRegion(ctx context.Context, region string) ([]mod
 	return []models.Gameserver{}, nil
 }
 
-//Todo: clean ^ this up a bit
+func newTestOrchestrator() orchestrator.Service {
+	cfg := gameserverconfig.Config{
+		AMI:           "ami-test",
+		SubnetID:      "subnet-test",
+		SecurityGroup: "sg-test",
+		InstanceType:  "t3.micro",
+	}
 
-func startGrpcServer(t *testing.T) (*grpc.Server, net.Listener, *orchestrator.Orchestrator) {
-	repo := &fakeRepo{}
-	orch := orchestrator.NewOrchestrator(repo, nil).(*orchestrator.Orchestrator)
+	return orchestrator.NewOrchestrator(&fakeRepo{}, nil, cfg)
+}
+func startGrpcServer(t *testing.T) (*grpc.Server, net.Listener, orchestrator.Service) {
+	orch := newTestOrchestrator()
 
-	lis, err := net.Listen("tcp", ":6767")
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,11 +69,12 @@ func startGrpcServer(t *testing.T) (*grpc.Server, net.Listener, *orchestrator.Or
 		grpcserver.NewSidecarServer(orch),
 	)
 
-	go func() {
-		if err := server.Serve(lis); err != nil {
-			t.Logf("grpc server stopped: %v", err)
-		}
-	}()
+	go server.Serve(lis)
+
+	t.Cleanup(func() {
+		server.Stop()
+		lis.Close()
+	})
 
 	return server, lis, orch
 }
