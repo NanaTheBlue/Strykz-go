@@ -27,8 +27,6 @@ func Notifications(s notifications.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 
-		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
-
 		user, ok := r.Context().Value(auth.UserContextKey).(*models.User)
 		if !ok || user == nil {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -37,7 +35,6 @@ func Notifications(s notifications.Service) http.HandlerFunc {
 
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			http.Error(w, "Failed to upgrade connection", http.StatusBadRequest)
 			return
 		}
 		s.AddConnection(user.ID, conn)
@@ -48,12 +45,16 @@ func Notifications(s notifications.Service) http.HandlerFunc {
 			http.Error(w, "Failed to Retrieve Notifications", http.StatusBadRequest)
 			return
 		}
-		marshalled, err := json.Marshal(notifications)
-		if err != nil {
-			http.Error(w, "Failed to Marshal json", http.StatusBadRequest)
+
+		if err := conn.WriteJSON(notifications); err != nil {
 			return
 		}
-		conn.WriteJSON(marshalled)
+
+		for {
+			if _, _, err := conn.ReadMessage(); err != nil {
+				break
+			}
+		}
 
 	}
 
