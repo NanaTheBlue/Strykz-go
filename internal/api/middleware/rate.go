@@ -66,7 +66,7 @@ func (rl *RateLimiter) Limit(next http.HandlerFunc) http.HandlerFunc {
 			visitor.mu.Unlock()
 			w.Header().Set("Retry-After", "1")
 			w.WriteHeader(http.StatusTooManyRequests)
-			w.Write([]byte("Rate limit exceeded"))
+			_, _ = w.Write([]byte("Rate limit exceeded"))
 			return
 		}
 

@@ -198,7 +198,7 @@ func (r *matchmakingRepo) InsertPlayers(ctx context.Context, players []*models.P
 	}
 
 	br := r.db.SendBatch(ctx, batch)
-	defer br.Close()
+	defer func() { _ = br.Close() }()
 
 	for range players {
 		if _, err := br.Exec(); err != nil {

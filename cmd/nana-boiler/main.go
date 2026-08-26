@@ -125,5 +125,7 @@ func main() {
 	router.HandleFunc("POST /que/", middleware.CORSMiddleware(rl.Limit(middleware.AuthMiddleware(inQue))))
 
 	println("Server Listening on Port 8080")
-	http.ListenAndServe(":8080", router)
+	if err := http.ListenAndServe(":8080", router); err != nil {
+		log.Fatal(err)
+	}
 }

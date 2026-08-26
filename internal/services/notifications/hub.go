@@ -29,7 +29,7 @@ func (h *Hub) Remove(userID string) {
 	defer h.mu.Unlock()
 	conn, ok := h.connections[userID]
 	if ok {
-		conn.Close()
+		_ = conn.Close()
 		delete(h.connections, userID)
 	}
 }

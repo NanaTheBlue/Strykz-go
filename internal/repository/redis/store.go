@@ -92,7 +92,7 @@ func (s *store) Publish(ctx context.Context, channel string, message models.Noti
 func (s *store) Subscribe(ctx context.Context, channel string, handler func(message string)) error {
 	pubsub := s.client.Subscribe(ctx, channel)
 
-	defer pubsub.Close()
+	defer func() { _ = pubsub.Close() }()
 
 	ch := pubsub.Channel()
 

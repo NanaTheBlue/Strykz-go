@@ -25,7 +25,7 @@ var upgrader = websocket.Upgrader{
 
 func Notifications(s notifications.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		defer r.Body.Close()
+		defer func() { _ = r.Body.Close() }()
 
 		user, ok := r.Context().Value(auth.UserContextKey).(*models.User)
 		if !ok || user == nil {
@@ -62,7 +62,7 @@ func Notifications(s notifications.Service) http.HandlerFunc {
 
 func RejectNotification(s social.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		defer r.Body.Close()
+		defer func() { _ = r.Body.Close() }()
 
 		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 		user, ok := r.Context().Value(auth.UserContextKey).(*models.User)
