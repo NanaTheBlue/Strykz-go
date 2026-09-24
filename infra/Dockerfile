@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Build The Application From Source
-FROM golang:1.26 AS build-stage
+FROM golang:1.26.0-bookworm AS build-stage
 
 WORKDIR /app
 
@@ -12,20 +12,17 @@ COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-strykz ./cmd/nana-boiler
 
-
-##TODO: RUN TESTS
-
 ## Lean Image
 FROM gcr.io/distroless/base-debian12 AS release-stage
+
+ARG GIT_SHA=unknown
+LABEL org.opencontainers.image.revision=$GIT_SHA
 
 WORKDIR /app
 
 COPY --from=build-stage /docker-strykz /docker-strykz
-COPY --from=build-stage /app/scripts /app/scripts
 
 EXPOSE 8080
 EXPOSE 6767
 
-
-
-CMD ["/docker-strykz"]
+ENTRYPOINT ["/docker-strykz"]

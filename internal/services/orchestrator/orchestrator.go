@@ -159,3 +159,17 @@ func (s *Orchestrator) Request(region string) {
 		}
 	}()
 }
+
+func (s *Orchestrator) TerminateServer(ctx context.Context, serverID string) error {
+	// Terminate the EC2 instance
+	_, err := s.ec2client.TerminateInstances(ctx, &ec2.TerminateInstancesInput{
+		InstanceIds: []string{serverID},
+	})
+	if err != nil {
+		log.Printf("failed to terminate EC2 instance %s: %v", serverID, err)
+		// we might still want to delete it from the DB
+	}
+
+	// Delete from our DB
+	return s.orchestratorrepo.DeleteServer(ctx, serverID)
+}

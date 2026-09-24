@@ -66,7 +66,13 @@ func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
 				}
 			}()
 		case *pb.SidecarEvent_ServerStopped:
-			log.Println("Here We Would Delete The Server")
+			func() {
+				ctx, cancel := context.WithTimeout(stream.Context(), 5*time.Second)
+				defer cancel()
+				if err := s.orchestrator.TerminateServer(ctx, serverID); err != nil {
+					log.Printf("failed to terminate server %s: %v", serverID, err)
+				}
+			}()
 		case *pb.SidecarEvent_LogLine:
 			line := payload.LogLine.Raw
 

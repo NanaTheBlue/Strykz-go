@@ -14,7 +14,11 @@ const (
 type MatchStatus string
 
 const (
-	AwaitingServer MatchStatus = "Awaiting_Server"
+	MatchAwaitingServer MatchStatus = "Awaiting_Server"
+	MatchAccepted       MatchStatus = "accepted"
+	MatchReady          MatchStatus = "ready"
+	MatchFinished       MatchStatus = "finished"
+	MatchCancelled      MatchStatus = "cancelled"
 )
 
 type Gameserver struct {
