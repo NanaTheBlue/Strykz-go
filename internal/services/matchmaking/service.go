@@ -157,7 +157,7 @@ func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*
 }
 
 func (s *matchmakingService) ReconcileAwaitingMatches(ctx context.Context) {
-	matches, err := s.matchmakingrepo.GetMatchesByStatus(ctx, models.AwaitingServer)
+	matches, err := s.matchmakingrepo.GetMatchesByStatus(ctx, models.MatchAwaitingServer)
 	if err != nil {
 		log.Printf("ERROR: GetMatchesByStatus Error : %v", err)
 	}
@@ -202,7 +202,7 @@ func (s *matchmakingService) finalizeMatch(ctx context.Context, matchID string, 
 			return err
 		}
 
-		if err := repo.UpdateMatchStatus(ctx, matchID, "ready"); err != nil {
+		if err := repo.UpdateMatchStatus(ctx, matchID, models.MatchReady); err != nil {
 			return err
 		}
 		return nil
@@ -277,7 +277,7 @@ func (s *matchmakingService) ConfirmMatch(ctx context.Context, player models.Pla
 			return errors.New("accept window expired")
 		}
 
-		if err := repo.UpdatePlayer(ctx, player, matchID, "accepted"); err != nil {
+		if err := repo.UpdatePlayer(ctx, player, matchID, string(models.MatchAccepted)); err != nil {
 			return err
 		}
 
@@ -287,7 +287,7 @@ func (s *matchmakingService) ConfirmMatch(ctx context.Context, player models.Pla
 		}
 
 		if allAccepted {
-			if err := repo.UpdateMatchStatus(ctx, matchID, models.AwaitingServer); err != nil {
+			if err := repo.UpdateMatchStatus(ctx, matchID, models.MatchAwaitingServer); err != nil {
 				return err
 			}
 
