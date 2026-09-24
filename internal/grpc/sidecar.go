@@ -45,23 +45,26 @@ func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
 		switch payload := evt.Payload.(type) {
 		case *pb.SidecarEvent_Heartbeat:
 
-			ctx, cancel := context.WithTimeout(stream.Context(), 500*time.Millisecond)
-			defer cancel()
-
-			err := s.orchestrator.UpdateHeartbeat(ctx, serverID)
-			if err != nil {
-				log.Println(err)
-			}
+			func() {
+				ctx, cancel := context.WithTimeout(stream.Context(), 500*time.Millisecond)
+				defer cancel()
+				err := s.orchestrator.UpdateHeartbeat(ctx, serverID)
+				if err != nil {
+					log.Println(err)
+				}
+			}()
 			log.Printf("heartbeat from %s", serverID)
 		case *pb.SidecarEvent_ServerStarted:
 			log.Println("Bing Bong")
 
-			ctx, cancel := context.WithTimeout(stream.Context(), 1000*time.Millisecond)
-			defer cancel()
-			err := s.orchestrator.UpdateServerStatus(ctx, serverID, models.ServerReady)
-			if err != nil {
-				log.Println(err)
-			}
+			func() {
+				ctx, cancel := context.WithTimeout(stream.Context(), 1000*time.Millisecond)
+				defer cancel()
+				err := s.orchestrator.UpdateServerStatus(ctx, serverID, models.ServerReady)
+				if err != nil {
+					log.Println(err)
+				}
+			}()
 		case *pb.SidecarEvent_ServerStopped:
 			log.Println("Here We Would Delete The Server")
 		case *pb.SidecarEvent_LogLine:
@@ -71,13 +74,15 @@ func (s *SidecarServer) Connect(stream pb.SidecarService_ConnectServer) error {
 
 				log.Printf("match finished on server %s: %s", serverID, line)
 
-				ctx, cancel := context.WithTimeout(stream.Context(), 2*time.Second)
-				defer cancel()
+				func() {
+					ctx, cancel := context.WithTimeout(stream.Context(), 2*time.Second)
+					defer cancel()
 
-				err := s.orchestrator.UpdateServerStatus(ctx, serverID, models.ServerReady)
-				if err != nil {
-					log.Println(err)
-				}
+					err := s.orchestrator.UpdateServerStatus(ctx, serverID, models.ServerReady)
+					if err != nil {
+						log.Println(err)
+					}
+				}()
 			}
 		default:
 			log.Printf("unhandled event type %T from %s", payload, evt.GetServerId())

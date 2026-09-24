@@ -76,7 +76,7 @@ func main() {
 	authService := auth.NewAuthService(authRepo, tokenRepo)
 	orchestrator := orchestrator.NewOrchestrator(orchestratorrepo, ec2Client, gameServerConfig)
 	notificationService := notifications.NewnotificationsService(hub, redisRepo, notificationRepo)
-	matchmakingService := matchmaking.NewMatchmakingService(redisRepo, pool, matchmakingRepo, orchestratorrepo, orchestrator, notificationService, orchestrator)
+	matchmakingService := matchmaking.NewMatchmakingService(redisRepo, pool, matchmakingRepo, orchestrator, orchestrator, notificationService, orchestrator)
 	socialService := social.NewsocialService(notificationService, pool, socialRepo, redisRepo)
 
 	//grpc

@@ -19,11 +19,7 @@ func NewRedisInstance(redis *redis.Client) Store {
 }
 
 func (s *store) Expire(ctx context.Context, key string, expiration time.Duration) error {
-	err := s.client.Expire(ctx, key, expiration).Err()
-	if err != nil {
-		panic(err)
-	}
-	return nil
+return s.client.Expire(ctx, key, expiration).Err()
 }
 
 func (s *store) Count(ctx context.Context, key string) (int64, error) {
@@ -36,11 +32,7 @@ func (s *store) Count(ctx context.Context, key string) (int64, error) {
 }
 
 func (s *store) Delete(ctx context.Context, key string) error {
-	err := s.client.Del(ctx, key).Err()
-	if err != nil {
-		panic(err)
-	}
-	return nil
+return s.client.Del(ctx, key).Err()
 }
 
 func (s *store) AddNX(ctx context.Context, key string, value string, exp time.Duration) (bool, error) {
@@ -62,21 +54,14 @@ func (s *store) AddNX(ctx context.Context, key string, value string, exp time.Du
 
 func (s *store) Add(ctx context.Context, key string, value []byte, expiration time.Duration) error {
 
-	err := s.client.Set(ctx, key, value, expiration).Err()
-	if err != nil {
-		panic(err)
-
-	}
-	return nil
+return s.client.Set(ctx, key, value, expiration).Err()
 }
 
 func (s *store) Get(ctx context.Context, key string) (string, error) {
 	val, err := s.client.Get(ctx, key).Result()
 	if err != nil {
-		panic(err)
-
+		return "", err
 	}
-	fmt.Println("foo", val)
 	return val, nil
 }
 

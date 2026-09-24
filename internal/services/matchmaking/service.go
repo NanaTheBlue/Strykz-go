@@ -12,26 +12,26 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nanagoboiler/internal/txutil"
+	"github.com/nanagoboiler/internal/services/orchestrator"
 	matchmakingrepo "github.com/nanagoboiler/internal/repository/matchmaking"
-	orchestratorrepo "github.com/nanagoboiler/internal/repository/orchestrator"
-	"github.com/nanagoboiler/internal/repository/redis"
+		"github.com/nanagoboiler/internal/repository/redis"
 	"github.com/nanagoboiler/models"
 )
 
 // will prob need to add a matchmaking repo
 type matchmakingService struct {
 	RedisRepo         redis.Store
-	pool              *pgxpool.Pool
+	db                txutil.Beginner
 	matchmakingrepo   matchmakingrepo.MatchmakingRepository
-	orchestratorrepo  orchestratorrepo.OrchestratoryRepository
+	orchestrator      orchestrator.Service
 	capacityRequester CapacityRequester
 	notifier          Notifier
 	serverSpeaker     ServerSpeaker
 }
 
-func NewMatchmakingService(redisRepo redis.Store, pool *pgxpool.Pool, matchmakingrepo matchmakingrepo.MatchmakingRepository, orchestratorrepo orchestratorrepo.OrchestratoryRepository, capacityRequester CapacityRequester, notifier Notifier, serverSpeaker ServerSpeaker) Service {
-	return &matchmakingService{RedisRepo: redisRepo, pool: pool, matchmakingrepo: matchmakingrepo, orchestratorrepo: orchestratorrepo, capacityRequester: capacityRequester, notifier: notifier, serverSpeaker: serverSpeaker}
+func NewMatchmakingService(redisRepo redis.Store, db txutil.Beginner, matchmakingrepo matchmakingrepo.MatchmakingRepository, orchestrator orchestrator.Service, capacityRequester CapacityRequester, notifier Notifier, serverSpeaker ServerSpeaker) Service {
+	return &matchmakingService{RedisRepo: redisRepo, db: db, matchmakingrepo: matchmakingrepo, orchestrator: orchestrator, capacityRequester: capacityRequester, notifier: notifier, serverSpeaker: serverSpeaker}
 }
 
 func (s *matchmakingService) InQue(ctx context.Context, player *models.Player) error {
@@ -94,7 +94,7 @@ func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*
 	var matchID string
 	deadline := time.Now().Add(30 * time.Second)
 
-	err := WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := txutil.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		repo := matchmakingrepo.NewMatchmakingRepository(tx)
 
 		id, err := repo.CreateMatch(ctx, deadline, region)
@@ -115,6 +115,9 @@ func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*
 
 	if err != nil {
 		log.Printf("ERROR: Transaction result error: %v", err)
+		for _, p := range matchCanidates {
+			s.RedisRepo.Que(ctx, "1v1", region, p)
+		}
 		return err
 	}
 
@@ -158,7 +161,7 @@ func (s *matchmakingService) ReconcileAwaitingMatches(ctx context.Context) {
 	}
 
 	for _, match := range matches {
-		server, err := s.orchestratorrepo.AcquireReadyServer(ctx, match.Region)
+		server, err := s.orchestrator.SelectServer(ctx, match.Region)
 		if err != nil {
 			log.Printf("ERROR: AcquireReadyServer Error : %v", err)
 			continue
@@ -190,7 +193,7 @@ func (s *matchmakingService) StartReconciler(ctx context.Context) {
 }
 
 func (s *matchmakingService) finalizeMatch(ctx context.Context, matchID string, serverID string) error {
-	err := WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := txutil.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		repo := matchmakingrepo.NewMatchmakingRepository(tx)
 
 		if err := repo.AssignServerToMatch(ctx, matchID, serverID); err != nil {
@@ -264,10 +267,10 @@ func (s *matchmakingService) GetPlayerByID(ctx context.Context, userID string) (
 func (s *matchmakingService) ConfirmMatch(ctx context.Context, player models.Player, matchID string, region string) error {
 	var shouldFinalize bool
 
-	err := WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := txutil.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		repo := matchmakingrepo.NewMatchmakingRepository(tx)
 
-		match, err := repo.GetMatch(ctx, matchID)
+		match, err := repo.GetMatchForUpdate(ctx, matchID)
 		if err != nil {
 			return err
 		}
@@ -286,7 +289,7 @@ func (s *matchmakingService) ConfirmMatch(ctx context.Context, player models.Pla
 		}
 
 		if allAccepted {
-			if err := repo.UpdateMatchStatus(ctx, matchID, "accepted"); err != nil {
+			if err := repo.UpdateMatchStatus(ctx, matchID, models.AwaitingServer); err != nil {
 				return err
 			}
 
@@ -301,14 +304,14 @@ func (s *matchmakingService) ConfirmMatch(ctx context.Context, player models.Pla
 	}
 
 	if shouldFinalize {
-		server, err := s.orchestratorrepo.AcquireReadyServer(ctx, region)
+		server, err := s.orchestrator.SelectServer(ctx, region)
 		if err != nil {
 			return err
 		}
 		if server == nil {
 			s.capacityRequester.Request(region)
 
-			return s.matchmakingrepo.UpdateMatchStatus(ctx, matchID, models.AwaitingServer)
+			return nil
 		}
 
 		return s.finalizeMatch(ctx, matchID, server.ID)
@@ -317,20 +320,4 @@ func (s *matchmakingService) ConfirmMatch(ctx context.Context, player models.Pla
 	return nil
 }
 
-func WithTx(
-	ctx context.Context,
-	pool *pgxpool.Pool,
-	fn func(tx pgx.Tx) error,
-) error {
-	tx, err := pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
 
-	if err := fn(tx); err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
-}

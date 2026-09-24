@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nanagoboiler/internal/repository/redis"
 	socialrepo "github.com/nanagoboiler/internal/repository/social"
 	"github.com/nanagoboiler/internal/services/notifications"
+	"github.com/nanagoboiler/internal/txutil"
 	"github.com/nanagoboiler/models"
 )
 

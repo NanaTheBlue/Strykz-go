@@ -15,5 +15,6 @@ type Service interface {
 	RegisterStream(serverID string, stream pb.SidecarService_ConnectServer)
 	UnregisterStream(serverID string)
 	GetStream(serverID string) pb.SidecarService_ConnectServer
+	SelectServer(ctx context.Context, region string) (*models.Gameserver, error)
 	ReloadWhitelist(serverID string, steamIDs []string) error
 }

@@ -21,10 +21,10 @@ func (r *matchmakingRepo) CreateMatch(ctx context.Context, deadline time.Time, r
 	var matchID string
 
 	err := r.db.QueryRow(ctx, `
-        INSERT INTO matches (accept_deadline,region)
-        VALUES ($1)
+        INSERT INTO matches (accept_deadline, region)
+        VALUES ($1, $2)
         RETURNING id
-    `, deadline).Scan(&matchID)
+    `, deadline, region).Scan(&matchID)
 	if err != nil {
 		return "", err
 	}
@@ -140,6 +140,21 @@ func (r *matchmakingRepo) GetPlayerByID(ctx context.Context, userID string) (mod
 func (r *matchmakingRepo) GetMatch(ctx context.Context, matchID string) (models.Match, error) {
 	var match models.Match
 	err := r.db.QueryRow(ctx, "SELECT id, server_id, started_at, accept_deadline, status, ended_at FROM matches WHERE id = $1", matchID).Scan(&match.ID,
+		&match.ServerID,
+		&match.StartedAt,
+		&match.AcceptDeadline,
+		&match.Status,
+		&match.EndedAt)
+
+	if err != nil {
+		return models.Match{}, err
+	}
+	return match, nil
+}
+
+func (r *matchmakingRepo) GetMatchForUpdate(ctx context.Context, matchID string) (models.Match, error) {
+	var match models.Match
+	err := r.db.QueryRow(ctx, "SELECT id, server_id, started_at, accept_deadline, status, ended_at FROM matches WHERE id = $1 FOR UPDATE", matchID).Scan(&match.ID,
 		&match.ServerID,
 		&match.StartedAt,
 		&match.AcceptDeadline,

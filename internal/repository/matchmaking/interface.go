@@ -15,6 +15,7 @@ type MatchmakingRepository interface {
 	UpdateMatchStatus(ctx context.Context, matchID string, status models.MatchStatus) error
 	AssignServerToMatch(ctx context.Context, matchID string, serverID string) error
 	GetMatch(ctx context.Context, matchID string) (models.Match, error)
+	GetMatchForUpdate(ctx context.Context, matchID string) (models.Match, error)
 	GetMatchPlayers(ctx context.Context, matchID string) ([]models.Player, error)
 	GetMatchesByStatus(ctx context.Context, status models.MatchStatus) ([]models.Match, error)
 	GetPlayerByID(ctx context.Context, userID string) (models.Player, error)

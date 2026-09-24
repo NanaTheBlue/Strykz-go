@@ -80,7 +80,7 @@ func (r *orchestratorRepo) CountReadyServers(ctx context.Context, region string)
 		ctx,
 		`SELECT COUNT(*) 
 		 FROM game_servers 
-		 WHERE region = $1 AND status = 'ready'`,
+		 WHERE region = $1 AND status = 'READY'`,
 		region,
 	).Scan(&count)
 
