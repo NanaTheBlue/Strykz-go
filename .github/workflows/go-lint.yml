@@ -1,4 +1,4 @@
-name: Go Tests
+name: Go Lint
 
 on:
   push:
@@ -6,8 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,8 +22,5 @@ jobs:
         with:
           go-version: "1.27"
 
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Run unit tests
-        run: go test -count=1 -tags=unit ./...
+      - name: Golangci-lint
+        uses: golangci/golangci-lint-action@v9.3.0

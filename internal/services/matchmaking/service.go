@@ -82,7 +82,9 @@ func (s *matchmakingService) QueReader(ctx context.Context, mode string) {
 		}
 
 		go func() {
-			s.CreateMatch(ctx, matchCandidates, region)
+			if err := s.CreateMatch(ctx, matchCandidates, region); err != nil {
+				log.Printf("failed to create match in region %s: %v", region, err)
+			}
 		}()
 
 	}
@@ -247,13 +249,9 @@ func (s *matchmakingService) finalizeMatch(ctx context.Context, matchID string, 
 	return nil
 }
 
-// as players join update status if kicked update status
+//nolint:unused // Reserved for player join and removal status updates.
 func (s *matchmakingService) updatePlayerStatus(ctx context.Context, matchID string, player models.Player, status string) error {
-	err := s.matchmakingrepo.UpdatePlayer(ctx, player, matchID, status)
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.matchmakingrepo.UpdatePlayer(ctx, player, matchID, status)
 }
 
 func (s *matchmakingService) GetPlayerByID(ctx context.Context, userID string) (models.Player, error) {

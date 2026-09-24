@@ -19,7 +19,11 @@ func NewRedisInstance(redis *redis.Client) Store {
 }
 
 func (s *store) Expire(ctx context.Context, key string, expiration time.Duration) error {
-return s.client.Expire(ctx, key, expiration).Err()
+	err := s.client.Expire(ctx, key, expiration).Err()
+	if err != nil {
+		return fmt.Errorf("failed to set expiration for key %s: %w", key, err)
+	}
+	return nil
 }
 
 func (s *store) Count(ctx context.Context, key string) (int64, error) {
@@ -32,7 +36,11 @@ func (s *store) Count(ctx context.Context, key string) (int64, error) {
 }
 
 func (s *store) Delete(ctx context.Context, key string) error {
-return s.client.Del(ctx, key).Err()
+	err := s.client.Del(ctx, key).Err()
+	if err != nil {
+		return fmt.Errorf("failed to delete key %s: %w", key, err)
+	}
+	return nil
 }
 
 func (s *store) AddNX(ctx context.Context, key string, value string, exp time.Duration) (bool, error) {
@@ -53,14 +61,20 @@ func (s *store) AddNX(ctx context.Context, key string, value string, exp time.Du
 }
 
 func (s *store) Add(ctx context.Context, key string, value []byte, expiration time.Duration) error {
-
-return s.client.Set(ctx, key, value, expiration).Err()
+	err := s.client.Set(ctx, key, value, expiration).Err()
+	if err != nil {
+		return fmt.Errorf("failed to add key %s: %w", key, err)
+	}
+	return nil
 }
 
 func (s *store) Get(ctx context.Context, key string) (string, error) {
 	val, err := s.client.Get(ctx, key).Result()
 	if err != nil {
-		return "", err
+		if err == redis.Nil {
+			return "", nil
+		}
+		return "", fmt.Errorf("failed to get key %s: %w", key, err)
 	}
 	return val, nil
 }
@@ -78,7 +92,7 @@ func (s *store) Publish(ctx context.Context, channel string, message models.Noti
 func (s *store) Subscribe(ctx context.Context, channel string, handler func(message string)) error {
 	pubsub := s.client.Subscribe(ctx, channel)
 
-	defer pubsub.Close()
+	defer func() { _ = pubsub.Close() }()
 
 	ch := pubsub.Channel()
 

@@ -10,7 +10,7 @@ import (
 
 func Que(s matchmaking.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		defer r.Body.Close()
+		defer func() { _ = r.Body.Close() }()
 		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 		user, ok := r.Context().Value(auth.UserContextKey).(*models.User)
