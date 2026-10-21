@@ -32,6 +32,10 @@ func (m *MockMatchmakingService) StartMatchMaking(ctx context.Context, mode stri
 	m.Called(ctx, mode)
 }
 
+func (m *MockMatchmakingService) StartReconciler(ctx context.Context) {
+	m.Called(ctx)
+}
+
 func (m *MockMatchmakingService) CreateMatch(ctx context.Context, matchCandidates []*models.Player, region string) error {
 	args := m.Called(ctx, matchCandidates, region)
 	return args.Error(0)

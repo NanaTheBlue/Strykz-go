@@ -10,6 +10,7 @@ type Service interface {
 	InQue(ctx context.Context, player *models.Player) error
 	QueReader(ctx context.Context, mode string)
 	StartMatchMaking(ctx context.Context, mode string)
+	StartReconciler(ctx context.Context)
 	CreateMatch(ctx context.Context, matchCanidates []*models.Player, region string) error
 	GetPlayerByID(ctx context.Context, userID string) (models.Player, error)
 }
