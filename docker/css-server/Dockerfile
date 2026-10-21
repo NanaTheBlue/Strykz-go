@@ -1,5 +1,5 @@
 # Build the Sidecar Binary
-FROM golang:1.26.0-bookworm AS builder
+FROM golang:1.27-bookworm AS builder
 
 WORKDIR /app
 COPY go.mod go.sum ./
