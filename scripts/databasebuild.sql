@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS game_servers(
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     region TEXT NOT NULL,
     status TEXT NOT NULL, /* Creating, Ready, Busy  */
+    ip TEXT,
     last_heartbeat TIMESTAMPTZ,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -53,6 +54,7 @@ CREATE TABLE IF NOT EXISTS game_servers(
 CREATE TABLE IF NOT EXISTS  matches(
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     server_id UUID  REFERENCES game_servers(id),
+    region TEXT,
     started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     accept_deadline  TIMESTAMPTZ NOT NULL,
     status TEXT,
@@ -83,6 +85,7 @@ CREATE TABLE IF NOT EXISTS notifications(
     addressee_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     notification_status TEXT NOT NULL,
     notification_type TEXT NOT NULL,
+    data TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CHECK (sender_id <> addressee_id)
 );
@@ -163,8 +166,3 @@ DROP TRIGGER IF EXISTS party_size_check ON party_members;
 CREATE TRIGGER party_size_check
 BEFORE INSERT ON party_members
 FOR EACH ROW EXECUTE FUNCTION check_party_size();
-
-
-
-
-

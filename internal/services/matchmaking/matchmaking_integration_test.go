@@ -42,19 +42,26 @@ func (f *fakeSpeaker) ReloadWhitelist(serverID string, steamIDs []string) error 
 	return nil
 }
 
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 	envPath := filepath.Join("..", "..", "..", ".env")
+	_ = godotenv.Load(envPath)
+
+	postgresURL := firstNonEmpty(os.Getenv("TEST_POSTGRES_URL"), os.Getenv("POSTGRES_URL"))
+	redisAddr := firstNonEmpty(os.Getenv("TEST_REDIS_ADDR"), os.Getenv("TEST_REDIS_ADDRESS"), os.Getenv("REDIS_ADDRESS"))
+	redisPass := firstNonEmpty(os.Getenv("TEST_REDIS_PASSWORD"), os.Getenv("REDIS_PASSWORD"))
+
 	var err error
-	err = godotenv.Load(envPath)
-	if err != nil {
-		panic("Error loading .env file")
-	}
-
-	redisAddr := os.Getenv("TEST_REDIS_ADDR")
-	redisPass := os.Getenv("TEST_REDIS_PASSWORD")
-
-	testPool, err = pgxpool.New(ctx, os.Getenv("TEST_POSTGRES_URL"))
+	testPool, err = pgxpool.New(ctx, postgresURL)
 	if err != nil {
 		panic(err)
 	}
