@@ -38,10 +38,15 @@ func main() {
 
 	client := pb.NewSidecarServiceClient(conn)
 
-	// Create stream with a background context (lives as long as the sidecar)
-	stream, err := client.Connect(context.Background())
-	if err != nil {
-		log.Fatalf("failed to open stream: %v", err)
+	// Open stream with retry in case the backend gRPC server is still booting
+	var stream pb.SidecarService_ConnectClient
+	for {
+		stream, err = client.Connect(context.Background())
+		if err == nil {
+			break
+		}
+		log.Printf("waiting for orchestrator stream (%v), retrying in 2s...", err)
+		time.Sleep(2 * time.Second)
 	}
 
 	// 1. Send ServerStarted

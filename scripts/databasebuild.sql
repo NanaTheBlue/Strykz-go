@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS bans(
 
 
 CREATE TABLE IF NOT EXISTS game_servers(
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::text,
     region TEXT NOT NULL,
     status TEXT NOT NULL, /* Creating, Ready, Busy  */
     ip TEXT,
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS game_servers(
 
 CREATE TABLE IF NOT EXISTS  matches(
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    server_id UUID  REFERENCES game_servers(id),
+    server_id TEXT  REFERENCES game_servers(id),
     region TEXT,
     started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     accept_deadline  TIMESTAMPTZ NOT NULL,
