@@ -7,5 +7,5 @@ import (
 )
 
 type Notifier interface {
-	CreateNoPublishNotification(ctx context.Context, notif models.Notification) (string, error)
+	CreateAndPublishNotification(ctx context.Context, notif models.Notification) error
 }

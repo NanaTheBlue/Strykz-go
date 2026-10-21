@@ -12,10 +12,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/nanagoboiler/internal/txutil"
-	"github.com/nanagoboiler/internal/services/orchestrator"
 	matchmakingrepo "github.com/nanagoboiler/internal/repository/matchmaking"
-		"github.com/nanagoboiler/internal/repository/redis"
+	"github.com/nanagoboiler/internal/repository/redis"
+	"github.com/nanagoboiler/internal/services/orchestrator"
+	"github.com/nanagoboiler/internal/txutil"
 	"github.com/nanagoboiler/models"
 )
 
@@ -118,7 +118,7 @@ func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*
 	if err != nil {
 		log.Printf("ERROR: Transaction result error: %v", err)
 		for _, p := range matchCanidates {
-			s.RedisRepo.Que(ctx, "1v1", region, p)
+			_ = s.RedisRepo.Que(ctx, "1v1", region, p)
 		}
 		return err
 	}
@@ -143,12 +143,8 @@ func (s *matchmakingService) CreateMatch(ctx context.Context, matchCanidates []*
 			CreatedAt:   time.Now(),
 		}
 
-		notifid, err := s.notifier.CreateNoPublishNotification(ctx, notif)
-		if err != nil {
+		if err := s.notifier.CreateAndPublishNotification(ctx, notif); err != nil {
 			log.Printf("failed to notify %s: %v", p.Player_id, err)
-		}
-		if notifid == "" {
-			log.Printf("ERROR: notifid NULL MatchMaking Service")
 		}
 	}
 
@@ -241,7 +237,7 @@ func (s *matchmakingService) finalizeMatch(ctx context.Context, matchID string, 
 			Status:      "unread",
 			CreatedAt:   time.Now(),
 		}
-		if _, err := s.notifier.CreateNoPublishNotification(ctx, notif); err != nil {
+		if err := s.notifier.CreateAndPublishNotification(ctx, notif); err != nil {
 			log.Printf("failed to notify player %s: %v", p.Player_id, err)
 		}
 	}
@@ -317,5 +313,3 @@ func (s *matchmakingService) ConfirmMatch(ctx context.Context, player models.Pla
 	// should improve this just prototype rn
 	return nil
 }
-
-

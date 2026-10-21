@@ -35,8 +35,8 @@ func (f *fakeCapacityRequester) Request(region string) {}
 type fakeNotifier struct{}
 type fakeSpeaker struct{}
 
-func (f *fakeNotifier) CreateNoPublishNotification(ctx context.Context, notification models.Notification) (string, error) {
-	return "test-id", nil
+func (f *fakeNotifier) CreateAndPublishNotification(ctx context.Context, notification models.Notification) error {
+	return nil
 }
 func (f *fakeSpeaker) ReloadWhitelist(serverID string, steamIDs []string) error {
 	return nil
