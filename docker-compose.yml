@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: strykz
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./scripts/databasebuild.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d strykz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      POSTGRES_URL: postgres://postgres:test@postgres:5432/strykz
+      REDIS_ADDRESS: redis:6379
+      REDIS_PASSWORD: ""
+      JWT_SECRET: local-e2e-secret
+      AWS_REGION: us-east-1
+    ports:
+      - "8080:8080"
+      - "6767:6767"
+
+  css-server:
+    build:
+      context: .
+      dockerfile: docker/css-server/Dockerfile
+    depends_on:
+      - backend
+    environment:
+      SERVER_ID: local-test-server-1
+      ORCHESTRATOR_ADDR: backend:6767
+    ports:
+      - "27015:27015/tcp"
+      - "27015:27015/udp"
+

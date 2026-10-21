@@ -1,7 +1,6 @@
 .env
 
 kubeconfig.yaml
-docker-compose.yml
 .tfstate
 .tfstate.backup
 .tfplan

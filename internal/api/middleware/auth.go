@@ -35,7 +35,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), auth.UserContextKey, user)
+		ctx := context.WithValue(r.Context(), auth.UserContextKey, &user)
 
 		log.Println(user.Username)
 

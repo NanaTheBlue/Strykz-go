@@ -179,11 +179,11 @@ func (s *socialService) PartyInvite(ctx context.Context, partyInviteReq models.P
 			return errors.New("cannot send party invite to user you not friends with")
 		}
 
-		exists, err := repo.AddPartyInvite(ctx, partyInviteReq)
+		created, err := repo.AddPartyInvite(ctx, partyInviteReq)
 		if err != nil {
 			return err
 		}
-		if exists {
+		if !created {
 			return errors.New("party invite already exists")
 		}
 

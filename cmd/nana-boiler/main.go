@@ -79,6 +79,11 @@ func main() {
 	matchmakingService := matchmaking.NewMatchmakingService(redisRepo, pool, matchmakingRepo, orchestrator, orchestrator, notificationService, orchestrator)
 	socialService := social.NewsocialService(notificationService, pool, socialRepo, redisRepo)
 
+	// Background workers
+	notificationService.StartBackgroundListener(ctx)
+	go matchmakingService.StartMatchMaking(ctx, "1v1")
+	go matchmakingService.StartReconciler(ctx)
+
 	//grpc
 	grpcserver.StartGRPC(orchestrator, ":6767")
 

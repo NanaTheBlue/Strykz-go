@@ -28,29 +28,39 @@ var (
 	testRedis *redis.Client
 )
 
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
 func TestMain(m *testing.M) {
-
-	fmt.Println("TEST_POSTGRES_URL:", os.Getenv("TEST_POSTGRES_URL"))
-	fmt.Println("TEST_REDIS_ADDRESS:", os.Getenv("TEST_REDIS_ADDRESS"))
-
 	envPath := filepath.Join("..", "..", "..", ".env")
 	fmt.Println("Loading .env from:", envPath)
-	err := godotenv.Load(envPath)
-	if err != nil {
-		panic("Error loading .env file")
-	}
+	_ = godotenv.Load(envPath)
+
+	postgresURL := firstNonEmpty(os.Getenv("TEST_POSTGRES_URL"), os.Getenv("POSTGRES_URL"))
+	redisAddr := firstNonEmpty(os.Getenv("TEST_REDIS_ADDRESS"), os.Getenv("TEST_REDIS_ADDR"), os.Getenv("REDIS_ADDRESS"))
+	redisPass := firstNonEmpty(os.Getenv("TEST_REDIS_PASSWORD"), os.Getenv("REDIS_PASSWORD"))
+
+	fmt.Println("TEST_POSTGRES_URL:", postgresURL)
+	fmt.Println("TEST_REDIS_ADDRESS:", redisAddr)
 
 	ctx := context.Background()
 
-	testPool, err = pgxpool.New(ctx, os.Getenv("TEST_POSTGRES_URL"))
+	var err error
+	testPool, err = pgxpool.New(ctx, postgresURL)
 	if err != nil {
 		panic(err)
 	}
 
 	testRedis, err = bootstrap.NewRedisInstance(
 		ctx,
-		os.Getenv("TEST_REDIS_ADDRESS"),
-		os.Getenv("TEST_REDIS_PASSWORD"),
+		redisAddr,
+		redisPass,
 	)
 	if err != nil {
 		panic(err)
@@ -58,7 +68,7 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 
 	testPool.Close()
-	testRedis.Close()
+	_ = testRedis.Close()
 
 	os.Exit(code)
 }
@@ -87,6 +97,8 @@ func createTestUser(t *testing.T, pool *pgxpool.Pool, username string) string {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
+	_, _ = pool.Exec(ctx, `DELETE FROM parties WHERE leader_id IN (SELECT id FROM users WHERE username=$1)`, username)
+	_, _ = pool.Exec(ctx, `DELETE FROM users WHERE username=$1`, username)
 
 	var userID string
 	err := pool.QueryRow(ctx,
@@ -100,8 +112,12 @@ func createTestUser(t *testing.T, pool *pgxpool.Pool, username string) string {
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
+		cleanupCtx := context.Background()
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM party_invites WHERE inviter_id=$1 OR invitee_id=$1`, userID)
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM party_members WHERE user_id=$1`, userID)
+		_, _ = pool.Exec(cleanupCtx, `DELETE FROM parties WHERE leader_id=$1`, userID)
 		_, _ = pool.Exec(
-			ctx,
+			cleanupCtx,
 			`DELETE FROM users WHERE id=$1`,
 			userID,
 		)
@@ -117,7 +133,7 @@ func TestSendFriendRequest_Integration(t *testing.T) {
 	user2 := createTestUser(t, testPool, "user2")
 
 	sub := testRedis.Subscribe(ctx, "notifications")
-	defer sub.Close()
+	defer func() { _ = sub.Close() }()
 	_, err := sub.Receive(ctx)
 	require.NoError(t, err)
 	ch := sub.Channel()
@@ -135,7 +151,7 @@ func TestSendFriendRequest_Integration(t *testing.T) {
 		ctx,
 		`SELECT EXISTS (
 			SELECT 1 FROM friend_requests
-			WHERE sender_id=$1 AND receiver_id=$2
+			WHERE sender_id=$1 AND recipient_id=$2
 		)`,
 		user1, user2,
 	).Scan(&exists)
@@ -220,9 +236,18 @@ func TestPartyInvite_Integration(t *testing.T) {
 	s, _ := setupService(testPool, testRedis)
 	user1 := createTestUser(t, testPool, "user1")
 	user2 := createTestUser(t, testPool, "user2")
+
+	err := s.socialrepo.CreateFriendRequest(ctx, models.FriendRequestInput{
+		SenderID:    user1,
+		RecipientID: user2,
+	})
+	require.NoError(t, err)
+	err = s.socialrepo.AddFriend(ctx, user2, user1)
+	require.NoError(t, err)
+
 	sub := testRedis.Subscribe(ctx, "notifications")
-	defer sub.Close()
-	_, err := sub.Receive(ctx)
+	defer func() { _ = sub.Close() }()
+	_, err = sub.Receive(ctx)
 	require.NoError(t, err)
 	ch := sub.Channel()
 
@@ -242,7 +267,7 @@ func TestPartyInvite_Integration(t *testing.T) {
 		err := json.Unmarshal([]byte(msg.Payload), &notif)
 		require.NoError(t, err)
 
-		require.Equal(t, "party_invite", notif.Type)
+		require.Equal(t, models.NotificationType("party_invite"), notif.Type)
 		require.Equal(t, user1, notif.SenderID)
 		require.Equal(t, user2, notif.RecipientID)
 

@@ -1,5 +1,5 @@
 # Build the Sidecar Binary
-FROM golang:1.26.0-bookworm AS builder
+FROM golang:1.27-bookworm AS builder
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -30,7 +30,7 @@ COPY --from=builder /sidecar /home/steam/css-dedicated/sidecar
 
 # Copy start script
 COPY --chown=steam:steam docker/css-server/start.sh /home/steam/css-dedicated/start.sh
-RUN chmod +x /home/steam/css-dedicated/start.sh
+RUN sed -i 's/\r$//' /home/steam/css-dedicated/start.sh && chmod +x /home/steam/css-dedicated/start.sh
 
 # Expose SRCDS ports
 EXPOSE 27015/tcp 27015/udp 27020/udp

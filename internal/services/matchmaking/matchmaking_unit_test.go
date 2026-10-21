@@ -18,9 +18,9 @@ type MockNotifier struct {
 	mock.Mock
 }
 
-func (m *MockNotifier) CreateNoPublishNotification(ctx context.Context, notif models.Notification) (string, error) {
+func (m *MockNotifier) CreateAndPublishNotification(ctx context.Context, notif models.Notification) error {
 	args := m.Called(ctx, notif)
-	return args.String(0), args.Error(1)
+	return args.Error(0)
 }
 
 type MockCapacityRequester struct {
