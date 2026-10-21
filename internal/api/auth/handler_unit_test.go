@@ -175,7 +175,7 @@ func TestRenewHandler_Success(t *testing.T) {
 	mockSvc := new(MockAuthService)
 	handler := Renew(mockSvc)
 
-	mockSvc.On("RenewToken", mock.Anything, mock.Anything).
+	mockSvc.On("RenewToken", mock.Anything, "valid-refresh").
 		Return(models.Tokens{Auth_token: "new-auth", Refresh_token: "new-refresh"}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/renew/", nil)
@@ -203,7 +203,7 @@ func TestRenewHandler_ServiceError(t *testing.T) {
 	mockSvc := new(MockAuthService)
 	handler := Renew(mockSvc)
 
-	mockSvc.On("RenewToken", mock.Anything, mock.Anything).
+	mockSvc.On("RenewToken", mock.Anything, "bad-token").
 		Return(models.Tokens{}, errors.New("token expired"))
 
 	req := httptest.NewRequest(http.MethodGet, "/renew/", nil)
@@ -212,6 +212,8 @@ func TestRenewHandler_ServiceError(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Empty(t, rec.Result().Cookies())
+	mockSvc.AssertExpectations(t)
 }
 
 func TestValidateUsername(t *testing.T) {

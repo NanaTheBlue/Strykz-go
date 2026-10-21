@@ -64,10 +64,11 @@ func Renew(s auth.Service) http.HandlerFunc {
 			return
 		}
 
-		tokens, err := s.RenewToken(r.Context(), refreshToken.String())
+		tokens, err := s.RenewToken(r.Context(), refreshToken.Value)
 
 		if err != nil {
 			http.Error(w, "Failed to Renew Tokens", http.StatusInternalServerError)
+			return
 		}
 
 		setCookie(w, "auth_token", tokens.Auth_token, now.Add(10*time.Minute), http.SameSiteNoneMode, true, true)
