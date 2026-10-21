@@ -79,6 +79,11 @@ func (m *MockMatchmakingRepo) GetMatch(ctx context.Context, matchID string) (mod
 	return args.Get(0).(models.Match), args.Error(1)
 }
 
+func (m *MockMatchmakingRepo) GetMatchForUpdate(ctx context.Context, matchID string) (models.Match, error) {
+	args := m.Called(ctx, matchID)
+	return args.Get(0).(models.Match), args.Error(1)
+}
+
 func (m *MockMatchmakingRepo) GetMatchPlayers(ctx context.Context, matchID string) ([]models.Player, error) {
 	args := m.Called(ctx, matchID)
 	if p := args.Get(0); p != nil {
@@ -184,6 +189,7 @@ func TestQueReader_EnoughPlayers(t *testing.T) {
 		{Player_id: "p2", Player_steamid: "s2"},
 	}
 	mockRedis.On("DeQue", mock.Anything, "1v1", "us", 2).Return(players, nil)
+	mockRedis.On("Que", mock.Anything, "1v1", "us", mock.Anything).Return(nil).Maybe()
 
 	svc.QueReader(context.Background(), "1v1")
 }

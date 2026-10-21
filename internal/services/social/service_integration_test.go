@@ -76,6 +76,8 @@ func setupService(pool *pgxpool.Pool, redisClient *redis.Client) (*socialService
 	service := &socialService{
 		socialrepo:          socialRepo,
 		notificationservice: notifService,
+		store:               redisStore,
+		db:                  pool,
 	}
 
 	return service, notifService

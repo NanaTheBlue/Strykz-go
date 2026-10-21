@@ -16,6 +16,8 @@ import (
 	matchmakingrepo "github.com/nanagoboiler/internal/repository/matchmaking"
 	orchestratorrepo "github.com/nanagoboiler/internal/repository/orchestrator"
 	"github.com/nanagoboiler/internal/repository/redis"
+	gameserverconfig "github.com/nanagoboiler/internal/services/config"
+	"github.com/nanagoboiler/internal/services/orchestrator"
 	"github.com/nanagoboiler/models"
 	"github.com/stretchr/testify/require"
 )
@@ -65,6 +67,7 @@ func TestMain(m *testing.M) {
 
 	mmRepo := matchmakingrepo.NewMatchmakingRepository(testPool)
 	orchRepo := orchestratorrepo.NewOrchestratorRepository(testPool)
+	orchSvc := orchestrator.NewOrchestrator(orchRepo, nil, gameserverconfig.Load())
 
 	fakeCapacity := &fakeCapacityRequester{}
 	fakeNotif := &fakeNotifier{}
@@ -74,7 +77,7 @@ func TestMain(m *testing.M) {
 		testRedis,
 		testPool,
 		mmRepo,
-		orchRepo,
+		orchSvc,
 		fakeCapacity,
 		fakeNotif,
 		fakeSpeaker,
@@ -117,7 +120,7 @@ func createTestUser(t *testing.T, pool *pgxpool.Pool, username string) string {
 }
 
 func clearTestQueue(ctx context.Context) {
-	testRedis.Delete(ctx, "queue:1v1:us")
+	_ = testRedis.Delete(ctx, "queue:1v1:us")
 
 }
 
@@ -145,7 +148,7 @@ func TestMatchmakingCreateMatchFromQueue_Integration(t *testing.T) {
 		select {
 		case <-timeout:
 			var count int
-			testPool.QueryRow(ctx, "SELECT COUNT(*) FROM matches").Scan(&count)
+			_ = testPool.QueryRow(ctx, "SELECT COUNT(*) FROM matches").Scan(&count)
 			t.Fatalf("match was not created in time. Total matches in DB: %d", count)
 		case <-tick:
 			err := testPool.QueryRow(ctx,

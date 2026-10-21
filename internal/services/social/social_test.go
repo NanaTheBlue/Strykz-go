@@ -26,7 +26,7 @@ func setupSocialService() *socialService {
 		notificationservice: notificationService,
 		socialrepo:          socialRepo,
 		store:               store,
-		pool:                nil, // Will be nil for unit tests
+		db:                  nil, // Will be nil for unit tests
 	}
 }
 

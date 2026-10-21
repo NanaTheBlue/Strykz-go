@@ -19,14 +19,15 @@ type socialService struct {
 	notificationservice notifications.Service
 	socialrepo          socialrepo.SocialRepository
 	store               redis.Store
-	pool                *pgxpool.Pool
+	db                  txutil.Beginner
 }
 
-func NewsocialService(notificationservice notifications.Service, pool *pgxpool.Pool, socialrepo socialrepo.SocialRepository, store redis.Store) Service {
+func NewsocialService(notificationservice notifications.Service, db txutil.Beginner, socialrepo socialrepo.SocialRepository, store redis.Store) Service {
 	return &socialService{
 		notificationservice: notificationservice,
 		socialrepo:          socialrepo,
 		store:               store,
+		db:                  db,
 	}
 }
 
@@ -114,7 +115,7 @@ func (s *socialService) RejectNotification(ctx context.Context, notifID string) 
 }
 
 func (s *socialService) AcceptFriendRequest(ctx context.Context, userID string, friendreqID string) error {
-	err := WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := txutil.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		repo := socialrepo.NewSocialRepository(tx)
 		req, err := repo.GetFriendRequest(ctx, friendreqID)
 		if err != nil {
@@ -148,7 +149,7 @@ func (s *socialService) CreateParty(ctx context.Context, userID string) (string,
 
 func (s *socialService) PartyInvite(ctx context.Context, partyInviteReq models.PartyInviteRequest) error {
 
-	err := WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := txutil.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		repo := socialrepo.NewSocialRepository(tx)
 		Leader, err := repo.CheckPartyLeader(
 			ctx,
@@ -216,22 +217,4 @@ func (s *socialService) PartyInvite(ctx context.Context, partyInviteReq models.P
 	}
 
 	return nil
-}
-
-func WithTx(
-	ctx context.Context,
-	pool *pgxpool.Pool,
-	fn func(tx pgx.Tx) error,
-) error {
-	tx, err := pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	if err := fn(tx); err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
 }

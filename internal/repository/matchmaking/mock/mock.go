@@ -47,6 +47,11 @@ func (m *MockMatchmakingRepo) GetMatch(ctx context.Context, matchID string) (mod
 	return args.Get(0).(models.Match), args.Error(1)
 }
 
+func (m *MockMatchmakingRepo) GetMatchForUpdate(ctx context.Context, matchID string) (models.Match, error) {
+	args := m.Called(ctx, matchID)
+	return args.Get(0).(models.Match), args.Error(1)
+}
+
 func (m *MockMatchmakingRepo) GetMatchPlayers(ctx context.Context, matchID string) ([]models.Player, error) {
 	args := m.Called(ctx, matchID)
 	players, _ := args.Get(0).([]models.Player)

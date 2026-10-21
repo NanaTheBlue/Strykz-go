@@ -301,17 +301,24 @@ func TestRemoveConnection(t *testing.T) {
 	assert.NotNil(t, svc.hub)
 }
 
-// Mock websocket connection for testing (no longer used in tests)
-type mockWebSocketConn struct{}
-
-func (m *mockWebSocketConn) ReadJSON(v interface{}) error {
-	return nil
+func TestHub_Send_NoConnection(t *testing.T) {
+	hub := NewHub()
+	err := hub.Send("nonexistent", models.Notification{})
+	assert.NoError(t, err)
 }
 
-func (m *mockWebSocketConn) WriteJSON(v interface{}) error {
-	return nil
+func TestNewHub(t *testing.T) {
+	hub := NewHub()
+	assert.NotNil(t, hub)
+	assert.NotNil(t, hub.connections)
 }
 
-func (m *mockWebSocketConn) Close() error {
-	return nil
+func TestHub_Broadcast(t *testing.T) {
+	hub := NewHub()
+	hub.Broadcast(models.Notification{})
+}
+
+func TestHub_Remove_NoConnection(t *testing.T) {
+	hub := NewHub()
+	hub.Remove("nonexistent")
 }

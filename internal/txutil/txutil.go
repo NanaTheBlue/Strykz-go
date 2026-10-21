@@ -2,6 +2,7 @@ package txutil
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -15,11 +16,15 @@ func WithTx(
 	db Beginner,
 	fn func(tx pgx.Tx) error,
 ) error {
+	if db == nil {
+		return errors.New("database beginner is nil")
+	}
+
 	tx, err := db.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	if err := fn(tx); err != nil {
 		return err
