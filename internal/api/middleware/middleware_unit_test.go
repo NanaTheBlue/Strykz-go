@@ -6,10 +6,15 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/nanagoboiler/internal/services/auth"
+	"github.com/nanagoboiler/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCORSMiddleware_SetsHeaders(t *testing.T) {
@@ -139,4 +144,68 @@ func TestLoggingMiddleware(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusCreated, rec.Code)
+}
+
+func TestAuthMiddleware_SuccessStoresUserPointer(t *testing.T) {
+	os.Setenv("JWT_SECRET", "test-secret")
+	defer os.Unsetenv("JWT_SECRET")
+
+	claims := models.AuthClaims{
+		UserId:   "user-123",
+		UserName: "testuser",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
+		},
+	}
+	tokenStr, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte("test-secret"))
+	require.NoError(t, err)
+
+	var ctxUser *models.User
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		u, ok := r.Context().Value(auth.UserContextKey).(*models.User)
+		require.True(t, ok, "expected *models.User in context")
+		ctxUser = u
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/que/", nil)
+	req.AddCookie(&http.Cookie{Name: "auth_token", Value: tokenStr})
+	req.AddCookie(&http.Cookie{Name: "csrf_token", Value: "csrf-123"})
+	req.Header.Set("X-CSRF-TOKEN", "csrf-123")
+
+	rec := httptest.NewRecorder()
+	AuthMiddleware(inner).ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	require.NotNil(t, ctxUser)
+	assert.Equal(t, "user-123", ctxUser.ID)
+	assert.Equal(t, "testuser", ctxUser.Username)
+}
+
+func TestAuthMiddleware_MissingCookies(t *testing.T) {
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("handler should not be called")
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/que/", nil)
+	rec := httptest.NewRecorder()
+	AuthMiddleware(inner).ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestAuthMiddleware_InvalidCSRF(t *testing.T) {
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("handler should not be called")
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/que/", nil)
+	req.AddCookie(&http.Cookie{Name: "auth_token", Value: "some-jwt"})
+	req.AddCookie(&http.Cookie{Name: "csrf_token", Value: "csrf-123"})
+	req.Header.Set("X-CSRF-TOKEN", "wrong-csrf")
+
+	rec := httptest.NewRecorder()
+	AuthMiddleware(inner).ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }
