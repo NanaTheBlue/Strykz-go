@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"flag"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -29,14 +30,14 @@ func main() {
 
 	log.Printf("Starting sidecar for server %s, connecting to %s", *serverID, *orchestratorAddr)
 
-	conn, err := grpc.Dial(*orchestratorAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(*orchestratorAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	client := pb.NewSidecarServiceClient(conn)
-	
+
 	// Create stream with a background context (lives as long as the sidecar)
 	stream, err := client.Connect(context.Background())
 	if err != nil {
@@ -81,9 +82,9 @@ func main() {
 			time.Sleep(2 * time.Second)
 			continue
 		}
-		
+
 		// Seek to end initially so we don't process old logs if sidecar restarts
-		file.Seek(0, 2)
+		_, _ = file.Seek(0, io.SeekEnd)
 		reader := bufio.NewReader(file)
 
 		for {
@@ -99,7 +100,6 @@ func main() {
 				continue
 			}
 
-			
 			err = stream.Send(&pb.SidecarEvent{
 				ServerId: *serverID,
 				Payload: &pb.SidecarEvent_LogLine{
